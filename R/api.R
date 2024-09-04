@@ -96,10 +96,10 @@ project_camera_labels <- get_project_labels(headers,label_type = 'Camera')
 
 test_labels <- media_labels %>% select(label_id, label_record_id, media_file_reference_location) %>% jsonlite::toJSON()
 
-push_new_labels <- function(key,
+push_new_labels <- function(header,
                             showURL=F){
 
-  urlreq_ap <- httr2::req_url_path_append(root,"updateMediaLabels", key)
+  urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
   urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(test_labels))
 
   preq <- httr2::req_perform(urlreq_ap)
