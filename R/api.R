@@ -17,7 +17,7 @@ auth_headers <- function(api_key){
   return(d)
 }
 
-headers <- auth_headers(api_key)
+# headers <- auth_headers(api_key)
 
 ### Get summary station data frame
 #' Get project station metadata
@@ -42,7 +42,7 @@ get_station_info <- function(headers,
 
 }
 
-stations <- get_station_info(headers,datatype = "video")
+# stations <- get_station_info(headers,datatype = "video")
 
 ### Get media assets for a given station
 #' Get media assets for a given project_system_record_id
@@ -67,7 +67,7 @@ get_media_assets <- function(headers,
 
 }
 
-media_labels <- get_media_assets(headers,datatype="video", project_system_record_id=stations$project_system_record_id[1])
+# media_labels <- get_media_assets(headers,datatype="video", project_system_record_id=stations$project_system_record_id[1])
 
 ### Get project labels for a given station
 #' Get project labels for either bioacoustics or camera
