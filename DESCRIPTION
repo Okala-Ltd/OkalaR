@@ -1,11 +1,11 @@
 Package: okalaR
 Type: Package
 Title: API wrapper around the okala dahsboard interface
-Version: 0.1.0
-Author: Adam Varley
-Maintainer: The package maintainer adam@okala,io
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Version: 1.0
+Authors@R: 
+    person("Adam", "Varley", , "adam@okala.io", role = c("aut", "cre"))
+Description: Allows basic reading and writing of data to and from your projecton the okala dashboard
+License: Apache License 2.0
 Encoding: UTF-8
 LazyData: true
+usethis::use_package("magrittr") 
