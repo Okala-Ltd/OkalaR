@@ -79,6 +79,7 @@ media_labels <- get_media_assets(headers,datatype="video", project_system_record
 #' @param label_type a character vector dictating the label type c('Bioacoustic','Camera')
 #' @return tibble of project labels
 #' @export
+
 get_project_labels <- function(headers,label_type = c('Bioacoustic','Camera'),
 
                                showURL=F){
@@ -108,7 +109,7 @@ push_new_labels <- function(key,
 
 }
 
-
+devtools::load_all()
 
 
 
