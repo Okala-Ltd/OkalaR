@@ -1,6 +1,7 @@
 library(tidyverse)
 #okala_URL <- "https://dev.api.dashboard.okala.io/api/"
-api_key <- "D2lfE2pxnrWI83daSqYqPcZDDSpwEIGT4lgNrOtv7ML5Qkk7qORwBmgvg7e46wd5MTuaVRwAMzaDuycrfH6Wuxy1Ti0PSFnHFeIF"
+#api_key <- "D2lfE2pxnrWI83daSqYqPcZDDSpwEIGT4lgNrOtv7ML5Qkk7qORwBmgvg7e46wd5MTuaVRwAMzaDuycrfH6Wuxy1Ti0PSFnHFeIF"
+api_key <- "OIqeRL4QD2IDFVmiW90mbUoU3wTLZRXCyAeVvo8UIagOM17CXWnu8ajuz09CVcwrTfxArhFgULH3pRZvNDsBgpb3TIb5Lxi4FjH3"
 
 #' Initiate root URL with API key
 #'
@@ -91,7 +92,148 @@ get_project_labels <- function(hdr,
 
 project_camera_labels <- get_project_labels(hdr=headers,labeltype='Camera')
 
-test_labels <- media_labels %>% select(label_id, label_record_id, media_file_reference_location) %>% jsonlite::toJSON()
+
+
+
+
+### Get data frame of updated label IDs
+
+new_labels <- function(Hdr,
+                       Data,
+                       ProjectLabels,
+                       PSRIs,
+                       Datatype=c("video","audio","image","eDNA")){
+
+  RES <- list()
+
+  for (psri in 1:length(PSRIs)){
+
+    ml <- get_media_assets(hdr=Hdr,
+                           datatype=Datatype,
+                           psrID=PSRIs[psri])
+
+    ml$label_f <- NA
+    ml$label_fspp <- NA
+
+    for (i in 1:nrow(ml)){
+      lab <- ml$species[i]
+      mfrl <- ml$media_file_reference_location[i]
+      ss <- Data[Data$new_vid_id==mfrl,]
+      if (nrow(ss)==0){  # If there are no records in the correctly labelled dataset for that specific camera location
+        ml$label_f[i] <- NA
+        ml$label_fspp[i] <- NA
+      }
+      else{
+        nr <- nrow(ss)
+        for (j in 1:nr){
+          sss <- ss[j,]
+          blank <- ifelse(sss$species_label=="Blank",1,0)
+          if (blank==1){   # If correct label is blank
+            ml$label_f[i] <- NA
+            ml$label_fspp[i] <- -1
+          }
+          else{
+            lab_correct <- sss$latin_name[1]
+            lab_correct2 <- strsplit(lab_correct, split="_")
+            lab_correct3 <- paste(c(lab_correct2[[1]][1],lab_correct2[[1]][2]),collapse=" ")
+            temp <- ProjectLabels$label_id[which(ProjectLabels$label==lab_correct3)]
+            if (length(temp)>0){
+              ml$label_f[i] <- temp
+              ml$label_fspp[i] <- lab_correct3
+            }
+            else{
+              ml$label_f[i] <- NA
+            }
+          }
+        }
+      }
+    }
+
+    RES[[psri]] <- ml
+
+    print(psri)
+  }
+
+  return(do.call(rbind,RES))
+
+}
+
+DATA <- read.csv("P0032_species_ID_list_FINAL.csv")
+PCLs <- get_project_labels(hdr=headers,labeltype='Camera')
+PBLs <- get_project_labels(hdr=headers,labeltype='Bioacoustic')
+PCL <- rbind(PCLs,PBLs)
+uPSRI <- unique(stations$project_system_record_id)
+
+testt <- new_labels(Hdr=headers,
+                    Data=DATA,
+                    ProjectLabels=PCL,
+                    PSRIs=uPSRI,
+                    Datatype="video")
+
+
+
+
+
+
+
+RES <- list()
+
+ADD_LABEL <- NA
+BLANK <- NA
+
+for (psri in 1:length(PSRIs)){
+
+  ml <- get_media_assets(hdr=headers,
+                         datatype="video",
+                         psrID=PSRIs[psri])
+
+  ml$label_f <- NA
+
+  for (i in 1:nrow(ml)){
+    lab <- ml$species[i]
+    mfrl <- ml$media_file_reference_location[i]
+    lab_correct <- DATA[DATA$new_vid_id==mfrl,"latin_name"][1]
+    if (is.na(lab_correct)==T){
+      lab_correct <- "Blank"
+      BLANK <- c(BLANK,lab_correct)
+      ml$label_f[i] <- NA
+    }
+    else{
+      lab_correct2 <- strsplit(lab_correct, split="_")
+      lab_correct3 <- paste(c(lab_correct2[[1]][1],lab_correct2[[1]][2]),collapse=" ")
+      temp <- ifelse(is.na(PCLs$label_id[which(PCLs$label==lab_correct3)])==F,
+                              PCLs$label_id[which(PCLs$label==lab_correct3)],
+                              PCLs$label_id[which(PCLs$label==lab_correct3)])
+      if (length(temp)>0){
+        ml$label_f[i] <- temp
+      }
+      else{
+        ADD_LABEL <- lab_correct3
+        ml$label_f[i] <- NA
+      }
+    }
+  }
+
+  RES[[psri]] <- ml
+
+  print(psri)
+}
+
+UPDATED_LABELS <- data.table::rbindlist(RES)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 push_new_labels <- function(header,
                             showURL=F){
