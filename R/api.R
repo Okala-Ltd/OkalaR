@@ -17,7 +17,7 @@ auth_headers <- function(api_key){
   return(d)
 }
 
-# headers <- auth_headers(api_key)
+Çheaders <- auth_headers(api_key)
 
 ### Get summary station data frame
 #' Get project station metadata
@@ -95,6 +95,8 @@ get_project_labels <- function(headers,label_type = c('Bioacoustic','Camera'),
 project_camera_labels <- get_project_labels(headers,label_type = 'Camera')
 
 test_labels <- media_labels %>% select(label_id, label_record_id, media_file_reference_location) %>% jsonlite::toJSON()
+
+
 
 push_new_labels <- function(header,
                             showURL=F){
