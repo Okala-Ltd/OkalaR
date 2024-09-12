@@ -1,6 +1,6 @@
 library(tidyverse)
 #okala_URL <- "https://dev.api.dashboard.okala.io/api/"
-#api_key <- "D2lfE2pxnrWI83daSqYqPcZDDSpwEIGT4lgNrOtv7ML5Qkk7qORwBmgvg7e46wd5MTuaVRwAMzaDuycrfH6Wuxy1Ti0PSFnHFeIF"
+# api_key <- "D2lfE2pxnrWI83daSqYqPcZDDSpwEIGT4lgNrOtv7ML5Qkk7qORwBmgvg7e46wd5MTuaVRwAMzaDuycrfH6Wuxy1Ti0PSFnHFeIF"
 api_key <- "OIqeRL4QD2IDFVmiW90mbUoU3wTLZRXCyAeVvo8UIagOM17CXWnu8ajuz09CVcwrTfxArhFgULH3pRZvNDsBgpb3TIb5Lxi4FjH3"
 
 #' Initiate root URL with API key
@@ -13,8 +13,8 @@ api_key <- "OIqeRL4QD2IDFVmiW90mbUoU3wTLZRXCyAeVvo8UIagOM17CXWnu8ajuz09CVcwrTfxA
 #'
 #' @export
 auth_headers <- function(api_key){
-  #okala_url <- "http://localhost:8000/api/"
-  okala_url <- "https://dev.api.dashboard.okala.io/api/"
+  okala_url <- "http://localhost:8000/api/"
+  # okala_url <- "https://dev.api.dashboard.okala.io/api/"
   root <- httr2::request(okala_url)
   d = list(key=api_key,
            root=root)
@@ -22,6 +22,17 @@ auth_headers <- function(api_key){
 }
 
 headers <- auth_headers(api_key)
+
+get_project <- function(hdr=headers){
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getProject",hdr$key)
+  preq <- httr2::req_perform(urlreq_ap)
+  resp <- httr2::resp_body_json(preq)
+  resp <- jsonlite::toJSON(resp$boundary)
+  geojson_response <-  geojsonsf::geojson_sf(resp)
+  return(geojson_response)
+}
+
+project_details = get_project(headers)
 
 #' Get project station metadata
 #'
@@ -68,7 +79,7 @@ get_media_assets <- function(hdr,
 
 media_labels <- get_media_assets(hdr=headers,
                                  datatype="video",
-                                 psrID=stations$project_system_record_id[1])
+                                 psrID=stations$project_system_record_id[5])
 
 #' Get project labels for either bioacoustics or camera
 #'
@@ -91,10 +102,6 @@ get_project_labels <- function(hdr,
 }
 
 project_camera_labels <- get_project_labels(hdr=headers,labeltype='Camera')
-
-
-
-
 
 ### Get data frame of updated label IDs
 
@@ -171,15 +178,52 @@ testt <- new_labels(Hdr=headers,
                     Datatype="video")
 
 
+testt$label_f = ifelse(is.na(testt$label_f),-1,testt$label_f)
+
+testt$label_fspp = ifelse(testt$label_fspp==-1,'Blank',testt$label_fspp)
+
+test_labels <- testt %>% select(segment_record_id,label_record_id,label_f) %>% rename(segment_record_id_fk = segment_record_id, label_id_fk=label_f)
+
+
+
+push_new_labels <- function(header,submission_records,chunksize){
+
+  spl.dt <- split( submission_records , cut(1:nrow(submission_records), round(nrow(submission_records)/chunksize)))
+
+  sendupatedlabels <- function(datachunk,header) {
+
+      datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
+
+      urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
+      urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
+      #
+      preq <- httr2::req_perform(urlreq_ap)
+      resp <- httr2::resp_body_string(preq)
+
+      return(jsonlite::fromJSON(resp))
+  }
+
+  for (i in 1:length(spl.dt)){
+
+    sendupatedlabels(datachunk=spl.dt[[i]],headers)
+    message('submitted ',i*chunksize,' labels of ', nrow(submission_records))
+  }
+
+}
+
+push_new_labels(headers,submission_records = test_labels,chunksize=30)
+# devtools::load_all()
 
 
 
 
 
-RES <- list()
 
-ADD_LABEL <- NA
-BLANK <- NA
+
+
+
+#
+
 
 for (psri in 1:length(PSRIs)){
 
@@ -202,8 +246,8 @@ for (psri in 1:length(PSRIs)){
       lab_correct2 <- strsplit(lab_correct, split="_")
       lab_correct3 <- paste(c(lab_correct2[[1]][1],lab_correct2[[1]][2]),collapse=" ")
       temp <- ifelse(is.na(PCLs$label_id[which(PCLs$label==lab_correct3)])==F,
-                              PCLs$label_id[which(PCLs$label==lab_correct3)],
-                              PCLs$label_id[which(PCLs$label==lab_correct3)])
+                     PCLs$label_id[which(PCLs$label==lab_correct3)],
+                     PCLs$label_id[which(PCLs$label==lab_correct3)])
       if (length(temp)>0){
         ml$label_f[i] <- temp
       }
@@ -221,34 +265,6 @@ for (psri in 1:length(PSRIs)){
 
 UPDATED_LABELS <- data.table::rbindlist(RES)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-push_new_labels <- function(header,
-                            showURL=F){
-
-  urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
-  urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(test_labels))
-
-  preq <- httr2::req_perform(urlreq_ap)
-  resp <- httr2::resp_body_string(preq)
-
-  return(jsonlite::fromJSON(resp))
-
-}
-
-devtools::load_all()
 
 
 
