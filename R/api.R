@@ -43,6 +43,7 @@ project_details = get_project(headers)
 #'
 #' @return This function returns an sf object containing station metadata and geometry
 #' @export
+#'
 get_station_info <- function(hdr,
                              datatype=c("video","audio","image","eDNA")){
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"getStations",datatype,hdr$key)
@@ -69,7 +70,8 @@ get_media_assets <- function(hdr,
                              datatype=c("video","audio","image","eDNA"),
                              psrID){
 
-  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getMediaAssets",datatype,psrID,hdr$key)
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getMediaSegments",datatype,psrID)
+
   preq <- httr2::req_perform(urlreq_ap)
   resp <- httr2::resp_body_string(preq)
 
@@ -79,7 +81,7 @@ get_media_assets <- function(hdr,
 
 media_labels <- get_media_assets(hdr=headers,
                                  datatype="video",
-                                 psrID=stations$project_system_record_id[5])
+                                 psrID=stations$project_system_record_id)
 
 #' Get project labels for either bioacoustics or camera
 #'
