@@ -1,7 +1,8 @@
 library(tidyverse)
+library(jsonlite)
+library(jsonify)
 #okala_URL <- "https://dev.api.dashboard.okala.io/api/"
 # api_key <- "D2lfE2pxnrWI83daSqYqPcZDDSpwEIGT4lgNrOtv7ML5Qkk7qORwBmgvg7e46wd5MTuaVRwAMzaDuycrfH6Wuxy1Ti0PSFnHFeIF"
-api_key <- "OIqeRL4QD2IDFVmiW90mbUoU3wTLZRXCyAeVvo8UIagOM17CXWnu8ajuz09CVcwrTfxArhFgULH3pRZvNDsBgpb3TIb5Lxi4FjH3"
 
 #' Initiate root URL with API key
 #'
@@ -12,27 +13,21 @@ api_key <- "OIqeRL4QD2IDFVmiW90mbUoU3wTLZRXCyAeVvo8UIagOM17CXWnu8ajuz09CVcwrTfxA
 #' @return This function returns a list containing the root URL and the API key
 #'
 #' @export
-auth_headers <- function(api_key){
-  okala_url <- "http://localhost:8000/api/"
-  # okala_url <- "https://dev.api.dashboard.okala.io/api/"
+auth_headers <- function(api_key, okala_url="https://dev.api.dashboard.okala.io/api/"){
   root <- httr2::request(okala_url)
   d = list(key=api_key,
            root=root)
   return(d)
 }
 
-headers <- auth_headers(api_key)
-
 get_project <- function(hdr=headers){
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"getProject",hdr$key)
   preq <- httr2::req_perform(urlreq_ap)
-  resp <- httr2::resp_body_json(preq)
-  resp <- jsonlite::toJSON(resp$boundary)
-  geojson_response <-  geojsonsf::geojson_sf(resp)
-  return(geojson_response)
+  resp_str <- httr2::resp_body_json(preq)
+  message('Setting you active project as - ',resp_str$features[[1]]$properties$project_name)
 }
 
-project_details = get_project(headers)
+
 
 #' Get project station metadata
 #'
@@ -53,7 +48,6 @@ get_station_info <- function(hdr,
   return(geojson_response)
 }
 
-stations <- get_station_info(hdr=headers,datatype="video")
 
 #' Retrieve media assets for a given project system record ID
 #'
@@ -70,18 +64,16 @@ get_media_assets <- function(hdr,
                              datatype=c("video","audio","image","eDNA"),
                              psrID){
 
-  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getMediaSegments",datatype,psrID)
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getMediaSegments",datatype,hdr$key) %>%
+    httr2::req_method("POST") %>% httr2::req_body_json(data=psrID)
 
-  preq <- httr2::req_perform(urlreq_ap)
-  resp <- httr2::resp_body_string(preq)
+  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
 
   return(jsonlite::fromJSON(resp) %>% tibble::as_tibble())
 
 }
 
-media_labels <- get_media_assets(hdr=headers,
-                                 datatype="video",
-                                 psrID=stations$project_system_record_id)
+
 
 #' Get project labels for either bioacoustics or camera
 #'
@@ -103,169 +95,128 @@ get_project_labels <- function(hdr,
   return(jsonlite::fromJSON(resp) %>% tibble::as_tibble())
 }
 
-project_camera_labels <- get_project_labels(hdr=headers,labeltype='Camera')
+#' Add project labels for either bioacoustics or camera so labeller have access to them in the Dashboard
+#'
+#' Labels are derived by using either suggested labels on the platform or by manually
+#' adding labels from the wider database
+#'
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param labeltype A character vector specifying the label type ('Bioacoustic' or 'Camera')
+#' @param labels A label object list like specifying the labels to be added
+#'
+#' @return This function returns a tibble containing project labels
+#'
+#' @export A success message as a list
+add_project_labels <- function(hdr,
+                               labeltype = c('Bioacoustic','Camera'),labels){
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"addProjectLabels",labeltype,hdr$key)
+  urlreq_ap <- urlreq_ap |>  httr2::req_method("POST") |> httr2::req_body_json(data=labels)
+  preq <- httr2::req_perform(urlreq_ap)
+  resp <- httr2::resp_body_json(preq)
 
-### Get data frame of updated label IDs
-
-new_labels <- function(Hdr,
-                       Data,
-                       ProjectLabels,
-                       PSRIs,
-                       Datatype=c("video","audio","image","eDNA")){
-
-  RES <- list()
-
-  for (psri in 1:length(PSRIs)){
-
-    ml <- get_media_assets(hdr=Hdr,
-                           datatype=Datatype,
-                           psrID=PSRIs[psri])
-
-    ml$label_f <- NA
-    ml$label_fspp <- NA
-
-    for (i in 1:nrow(ml)){
-      lab <- ml$species[i]
-      mfrl <- ml$media_file_reference_location[i]
-      ss <- Data[Data$new_vid_id==mfrl,]
-      if (nrow(ss)==0){  # If there are no records in the correctly labelled dataset for that specific camera location
-        ml$label_f[i] <- NA
-        ml$label_fspp[i] <- NA
-      }
-      else{
-        nr <- nrow(ss)
-        for (j in 1:nr){
-          sss <- ss[j,]
-          blank <- ifelse(sss$species_label=="Blank",1,0)
-          if (blank==1){   # If correct label is blank
-            ml$label_f[i] <- NA
-            ml$label_fspp[i] <- -1
-          }
-          else{
-            lab_correct <- sss$latin_name[1]
-            lab_correct2 <- strsplit(lab_correct, split="_")
-            lab_correct3 <- paste(c(lab_correct2[[1]][1],lab_correct2[[1]][2]),collapse=" ")
-            temp <- ProjectLabels$label_id[which(ProjectLabels$label==lab_correct3)]
-            if (length(temp)>0){
-              ml$label_f[i] <- temp
-              ml$label_fspp[i] <- lab_correct3
-            }
-            else{
-              ml$label_f[i] <- NA
-            }
-          }
-        }
-      }
-    }
-
-    RES[[psri]] <- ml
-
-    print(psri)
-  }
-
-  return(do.call(rbind,RES))
-
+  return(resp)
 }
 
-DATA <- read.csv("P0032_species_ID_list_FINAL.csv")
-PCLs <- get_project_labels(hdr=headers,labeltype='Camera')
-PBLs <- get_project_labels(hdr=headers,labeltype='Bioacoustic')
-PCL <- rbind(PCLs,PBLs)
-uPSRI <- unique(stations$project_system_record_id)
 
-testt <- new_labels(Hdr=headers,
-                    Data=DATA,
-                    ProjectLabels=PCL,
-                    PSRIs=uPSRI,
-                    Datatype="video")
+replace_nas <- function(df){
+  df[sapply(df,function(x) is.null(x))] = NA
+  return(df)
+}
 
 
-testt$label_f = ifelse(is.na(testt$label_f),-1,testt$label_f)
+#' Get labels from the wider IUCN database (all species)
+#'
+#' Labels are derived by using either suggested labels on the platform or by manually
+#' adding labels from the wider database
+#'
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param offset An integer specifying the offset for the query
+#' @param limit An integer specifying the limit for the query
+#' @param search_term A character vector specifying the search term to be used (Can be left our for ful search)
+#'
+#' @return a list containing tabular data and pagination information for iterative calls
+#'
+#' @export A success message as a list
+getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
+  if (is.null(search_term)){
+    search_term = ""
+  }
+  if (limit > 20000){
+    stop("Limit cannot be greater than 20000")
+  }
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getIUCNLabels",hdr$key)
+  urlreq_ap <- urlreq_ap |>  httr2::req_method("GET") |> httr2::req_url_query("offset" = offset, "limit" = limit,'search_term'= search_term)
 
-testt$label_fspp = ifelse(testt$label_fspp==-1,'Blank',testt$label_fspp)
+  preq <- httr2::req_perform(urlreq_ap)
+  resp <- httr2::resp_body_json(preq)
+  resp_table <- lapply(resp$table, function(x) x %>% replace_nas() %>%  tibble::as_tibble()) %>% bind_rows()
 
-test_labels <- testt %>% select(segment_record_id,label_record_id,label_f) %>% rename(segment_record_id_fk = segment_record_id, label_id_fk=label_f)
+  return (list(data=resp_table, total=resp$pagination_state$total, offset=resp$pagination_state$offset, limit=resp$pagination_state$limit))
+}
 
 
+sendupatedlabels <- function(datachunk,header) {
 
-push_new_labels <- function(header,submission_records,chunksize){
+  datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
+
+  urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
+  urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
+  #
+  preq <- httr2::req_perform(urlreq_ap)
+  resp <- httr2::resp_body_string(preq)
+
+  return(jsonlite::fromJSON(resp))
+}
+
+#' Push new labels using a chunked process
+#'
+#' Labels are derived by using either suggested labels on the platform or by manually
+#' adding labels from the wider database
+#'
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param submission_records A tibble containing the records to be submitted
+#' @param chunksize An integer specifying the chunk size for the submission
+
+#' @return a list containing tabular data and pagination information for iterative calls
+#'
+#' @export A success message as a list
+
+push_new_labels <- function(hdr,submission_records,chunksize){
 
   spl.dt <- split( submission_records , cut(1:nrow(submission_records), round(nrow(submission_records)/chunksize)))
 
-  sendupatedlabels <- function(datachunk,header) {
-
-      datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
-
-      urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
-      urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
-      #
-      preq <- httr2::req_perform(urlreq_ap)
-      resp <- httr2::resp_body_string(preq)
-
-      return(jsonlite::fromJSON(resp))
-  }
-
   for (i in 1:length(spl.dt)){
 
-    sendupatedlabels(datachunk=spl.dt[[i]],headers)
+    sendupatedlabels(datachunk=spl.dt[[i]],hdr)
     message('submitted ',i*chunksize,' labels of ', nrow(submission_records))
   }
-
 }
 
-push_new_labels(headers,submission_records = test_labels,chunksize=30)
-# devtools::load_all()
 
 
+#' Update label list labels for either bioacoustics or camera
+#'
+#' Labels are derived by using either suggested labels on the platform or by manually
+#' adding labels from the wider database
+#'
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param labeltype A character vector specifying the label type ('Bioacoustic' or 'Camera')
+#'
+#' @return This function returns a tibble containing project labels
+#'
+#' @export
 
+urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
+urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
+#
+preq <- httr2::req_perform(urlreq_ap)
+resp <- httr2::resp_body_string(preq)
 
-
-
-
-
+return(jsonlite::fromJSON(resp))
 
 #
 
 
-for (psri in 1:length(PSRIs)){
-
-  ml <- get_media_assets(hdr=headers,
-                         datatype="video",
-                         psrID=PSRIs[psri])
-
-  ml$label_f <- NA
-
-  for (i in 1:nrow(ml)){
-    lab <- ml$species[i]
-    mfrl <- ml$media_file_reference_location[i]
-    lab_correct <- DATA[DATA$new_vid_id==mfrl,"latin_name"][1]
-    if (is.na(lab_correct)==T){
-      lab_correct <- "Blank"
-      BLANK <- c(BLANK,lab_correct)
-      ml$label_f[i] <- NA
-    }
-    else{
-      lab_correct2 <- strsplit(lab_correct, split="_")
-      lab_correct3 <- paste(c(lab_correct2[[1]][1],lab_correct2[[1]][2]),collapse=" ")
-      temp <- ifelse(is.na(PCLs$label_id[which(PCLs$label==lab_correct3)])==F,
-                     PCLs$label_id[which(PCLs$label==lab_correct3)],
-                     PCLs$label_id[which(PCLs$label==lab_correct3)])
-      if (length(temp)>0){
-        ml$label_f[i] <- temp
-      }
-      else{
-        ADD_LABEL <- lab_correct3
-        ml$label_f[i] <- NA
-      }
-    }
-  }
-
-  RES[[psri]] <- ml
-
-  print(psri)
-}
-
-UPDATED_LABELS <- data.table::rbindlist(RES)
 
 
 
