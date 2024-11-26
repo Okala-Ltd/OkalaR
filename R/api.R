@@ -155,6 +155,35 @@ getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
 }
 
 
+#' Add labels from the wider IUCN database (all species)
+#'
+#' adding labels from the wider database
+#'
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param offset An integer specifying the offset for the query
+#' @param limit An integer specifying the limit for the query
+#' @param search_term A character vector specifying the search term to be used (Can be left our for ful search)
+#'
+#' @return a list containing tabular data and pagination information for iterative calls
+#'
+#' @export A success message as a list
+
+add_IUCN_labels <- function(hdr,labels){
+
+  # labels = jsonlite::toJSON(labels)
+
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"addIUCNLabels",hdr$key)
+  urlreq_ap <- urlreq_ap |>  httr2::req_method("POST") |> httr2::req_body_json(labels)
+
+  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
+  resp <- httr2::resp_body_json(preq)
+
+  return(resp)
+}
+
+
+
+
 sendupatedlabels <- function(datachunk,header) {
 
   datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)

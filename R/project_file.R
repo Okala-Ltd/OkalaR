@@ -20,7 +20,15 @@ media_labels <- get_media_assets(hdr=headers,
 project_camera_labels <- get_project_labels(hdr=headers,labeltype='Camera')
 
 # Get labels from the wider data base using a search term if need, remmove the query parameter if you want all results to come back
-labelled_data = getIUCNLabels(hdr=headers,limit=2000,offset=0,search_term = 'Frog')
+labelled_data = getIUCNLabels(hdr=headers,
+                              limit=2000,
+                              offset=0,
+                              search_term = 'Frog')
+
+# Add labels to IUCN database
+example_data <- 'data/domestic_animals.json'
+example_data <- jsonlite::fromJSON(example_data)
+add_IUCN_labels(hdr=headers,labels=example_data)
 
 
 testt <- new_labels(Hdr=headers,
@@ -118,13 +126,7 @@ push_new_labels <- function(header,submission_records,chunksize){
 
     return(jsonlite::fromJSON(resp))
   }
-
-
 }
-
-
-# devtools::load_all()
-
 
 
 
