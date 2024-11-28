@@ -1,7 +1,10 @@
 library(tidyverse)
 library(jsonlite)
 library(jsonify)
+library('leaflet')
+
 #okala_URL <- "https://dev.api.dashboard.okala.io/api/"
+
 # api_key <- "D2lfE2pxnrWI83daSqYqPcZDDSpwEIGT4lgNrOtv7ML5Qkk7qORwBmgvg7e46wd5MTuaVRwAMzaDuycrfH6Wuxy1Ti0PSFnHFeIF"
 
 #' Initiate root URL with API key
@@ -24,7 +27,7 @@ get_project <- function(hdr=headers){
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"getProject",hdr$key)
   preq <- httr2::req_perform(urlreq_ap)
   resp_str <- httr2::resp_body_json(preq)
-  message('Setting you active project as - ',resp_str$features[[1]]$properties$project_name)
+  message('Setting your active project as - ',resp_str$boundary$features[[1]]$properties$project_name)
 }
 
 
@@ -45,8 +48,30 @@ get_station_info <- function(hdr,
   preq <- httr2::req_perform(urlreq_ap)
   resp <- httr2::resp_body_string(preq)
   geojson_response = geojsonsf::geojson_sf(resp)
+
   return(geojson_response)
 }
+
+plot_stations <- function(geojson_response){
+    message('Plotting stations')
+    leaflet::leaflet(data = geojson_response) %>%
+      leaflet::addTiles() %>%
+      leaflet::addCircleMarkers(lat=sf::st_coordinates(geojson_response)[,2],
+                                lng=sf::st_coordinates(geojson_response)[,1],
+                                label = ~paste(qr_code),
+                                popup = ~paste("QR code: ",qr_code, "<br>",
+                                               "Start time: ",project_system_record_start_timestamp, "<br>",
+                                               "End time: ",project_system_record_end_timestamp, "<br>"
+                                ),
+                                color = "red",
+                                opacity = 0.2,
+                                stroke = T,
+                                fillOpacity = 0.6,
+                                radius = ~ scales::rescale(record_count, c(5,15))
+                                )
+
+}
+
 
 
 #' Retrieve media assets for a given project system record ID
@@ -60,14 +85,16 @@ get_station_info <- function(hdr,
 #' @return This function returns a tibble of media assets for the specified project system record
 #'
 #' @export
+#'
 get_media_assets <- function(hdr,
                              datatype=c("video","audio","image","eDNA"),
                              psrID){
 
-  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getMediaSegments",datatype,hdr$key) %>%
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"getMediaAssets",datatype,hdr$key) %>%
     httr2::req_method("POST") %>% httr2::req_body_json(data=psrID)
 
-  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
+  preq <- httr2::req_perform(urlreq_ap,verbosity=2)
+  resp <- httr2::resp_body_string(preq)
 
   return(jsonlite::fromJSON(resp) %>% tibble::as_tibble())
 
@@ -167,28 +194,51 @@ getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
 #' @return a list containing tabular data and pagination information for iterative calls
 #'
 #' @export A success message as a list
+chunksize=200
+add_IUCN_labels <- function(hdr,labels,chunksize){
 
-add_IUCN_labels <- function(hdr,labels){
+  if(chunksize > nrow(labels)){
+    message('chunksize is bigger than length of data altering chunkszie to ', nrow(labels))
+    chunksize = nrow(labels)
+  }
 
-  # labels = jsonlite::toJSON(labels)
+  spl.dt <- split( labels , cut(1:nrow(labels), round(nrow(labels)/chunksize)))
+  i = 31
+  for (i in 1:length(spl.dt)){
 
-  urlreq_ap <- httr2::req_url_path_append(hdr$root,"addIUCNLabels",hdr$key)
-  urlreq_ap <- urlreq_ap |>  httr2::req_method("POST") |> httr2::req_body_json(labels)
+    sub <- spl.dt[[i]]
 
-  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
-  resp <- httr2::resp_body_json(preq)
+    urlreq_ap <- httr2::req_url_path_append(hdr$root,"addIUCNLabels",hdr$key)
+    urlreq_ap <- urlreq_ap |>  httr2::req_method("POST") |> httr2::req_body_json(data=spl.dt[[i]])
+
+    preq <- httr2::req_perform(urlreq_ap,verbosity=3)
+    resp <- httr2::resp_body_json(preq)
+
+    message('submitted ',i*chunksize,' labels of ', nrow(nrow(labels)))
+  }
 
   return(resp)
 }
 
 
+#' sendupdated labels a subfunction used by push_new_labels
+#'
+#' adding labels from the wider database
+#'
+#' @param  A tibble containing the records to be submitted
+#' @param hdr hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param limit An integer specifying the limit for the query
+#' @param search_term A character vector specifying the search term to be used (Can be left our for ful search)
+#'
+#' @return a list containing tabular data and pagination information for iterative calls
+#'
+#' @export A success message as a list
 
-
-sendupatedlabels <- function(datachunk,header) {
+sendupatedlabels <- function(hdr,datachunk) {
 
   datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
 
-  urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"updateMediaLabels", hdr$key)
   urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
   #
   preq <- httr2::req_perform(urlreq_ap)
@@ -204,6 +254,17 @@ sendupatedlabels <- function(datachunk,header) {
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
 #' @param submission_records A tibble containing the records to be submitted
+#'
+#' [
+#'   {
+#'     "segment_record_id_fk": 0,
+#'     "label_id_fk": 0,
+#'     "number_of_individuals": 1,
+#'     "prediction_accuracy": 100,
+#'    "label_record_id": 0
+#'   }
+#' ]
+#'
 #' @param chunksize An integer specifying the chunk size for the submission
 
 #' @return a list containing tabular data and pagination information for iterative calls
@@ -212,11 +273,16 @@ sendupatedlabels <- function(datachunk,header) {
 
 push_new_labels <- function(hdr,submission_records,chunksize){
 
+  if(chunksize > nrow(submission_records)){
+    message('chunksize is bigger than length of data altering chunkszie to ', nrow(labels))
+    chunksize = nrow(submission_records)
+  }
+
   spl.dt <- split( submission_records , cut(1:nrow(submission_records), round(nrow(submission_records)/chunksize)))
 
   for (i in 1:length(spl.dt)){
 
-    sendupatedlabels(datachunk=spl.dt[[i]],hdr)
+    sendupatedlabels(hdr,datachunk=spl.dt[[i]])
     message('submitted ',i*chunksize,' labels of ', nrow(submission_records))
   }
 }

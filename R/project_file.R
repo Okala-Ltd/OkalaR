@@ -1,15 +1,18 @@
 source('R/api.R')
 
-api_key <- "DmGsL7UPVJoLbfSXB6UxjckyaLppZin6sthHOWppwqeZkvdIQFmYOj8lMO6cZDSWXC5HXXXxGXhutIv3h6eO88BJfWMo34iPb0V5"
+api_key <- "ICyPK2w2Cqd0ljNmirEfffDMiZzAr5t5QeGgoMnlie1k1iYeXOU0UFqUBYWd3ci0k4wGRNAkdFhSKhZEyGMddT91sOkraa87dVPM"
+api_key = 'e8SVf5H060eyWmB5QLUu0FWhp0fR5GQ8wOsvd0dOSxiZbO2lqbDwAaxeQ2qaumOUZlrS6nXmVw27iTLzpj2AgBicTRB1M6k2tiUO'
 
 # Set auth headers appropriately
-headers <- auth_headers(api_key,okala_url="http://localhost:8000/api/")
+headers <- auth_headers(api_key,okala_url="http://127.0.0.1:8000/api/")
 
-# Way to see the project you are pulling
+# Way to see the project you are pulling and confirm api key is correct
 get_project(hdr=headers)
 
 # Get station information for videos in the project and there corresponding IDs
 stations <- get_station_info(hdr=headers,datatype="video")
+
+plot_stations(stations)
 
 # Get media lables for a list of sensors
 media_labels <- get_media_assets(hdr=headers,
@@ -23,12 +26,44 @@ project_camera_labels <- get_project_labels(hdr=headers,labeltype='Camera')
 labelled_data = getIUCNLabels(hdr=headers,
                               limit=2000,
                               offset=0,
-                              search_term = 'Frog')
+                              search_term = 'Domestic horse')
 
 # Add labels to IUCN database
-example_data <- 'data/domestic_animals.json'
+example_data <- 'data/plantae_iucn.json'
+example_data <- readLines(example_data)
 example_data <- jsonlite::fromJSON(example_data)
-add_IUCN_labels(hdr=headers,labels=example_data)
+example_data <-  jsonlite::fromJSON(example_data)
+example_data <- example_data[example_data$species!='NA',]
+example_data$class <- example_data$class_
+example_data$extant_country_list = NA
+example_data$iucn_redlist_status[example_data$iucn_redlist_status=='Extinct In The Wild'] = 'Extinct in the Wild'
+example_data$iucn_redlist_status <- gsub('Lower Risk/', '',example_data$iucn_redlist_status)
+example_data$iucn_redlist_status <- gsub('Conservation Dependent', 'Not Evaluated',example_data$iucn_redlist_status)
+
+
+add_IUCN_labels(hdr=headers,labels=example_data,chunksize = 500)
+
+# Update existing labels on the platform
+
+data.frame()
+media_labels[1,]
+new_label_id <- project_camera_labels[which(project_camera_labels$common_name=='Uneven-toothed Rat'),'label_id']
+segment_record_to_change = data.frame(segment_record_id_fk = media_labels[1,'segment_record_id'],label_id_fk = 1)
+
+submission_frame <- data.frame(segment_record_id_fk = segment_record_to_change,label_id_fk = new_label_id, number_of_individuals = 1)
+
+
+push_new_labels(hdr=headers,submission_records = submission_frame,chunksize=30))
+
+
+
+
+
+
+
+
+
+
 
 
 testt <- new_labels(Hdr=headers,
@@ -109,24 +144,6 @@ new_labels <- function(Hdr,
 
 
 
-
-push_new_labels <- function(header,submission_records,chunksize){
-
-  spl.dt <- split( submission_records , cut(1:nrow(submission_records), round(nrow(submission_records)/chunksize)))
-
-  sendupatedlabels <- function(datachunk,header) {
-
-    datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
-
-    urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
-    urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
-    #
-    preq <- httr2::req_perform(urlreq_ap)
-    resp <- httr2::resp_body_string(preq)
-
-    return(jsonlite::fromJSON(resp))
-  }
-}
 
 
 
