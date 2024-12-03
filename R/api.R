@@ -61,7 +61,8 @@ plot_stations <- function(geojson_response){
                                 label = ~paste(qr_code),
                                 popup = ~paste("QR code: ",qr_code, "<br>",
                                                "Start time: ",project_system_record_start_timestamp, "<br>",
-                                               "End time: ",project_system_record_end_timestamp, "<br>"
+                                               "End time: ",project_system_record_end_timestamp, "<br>",
+                                               "Record count: ",record_count, "<br>"
                                 ),
                                 color = "red",
                                 opacity = 0.2,
@@ -93,7 +94,7 @@ get_media_assets <- function(hdr,
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"getMediaAssets",datatype,hdr$key) %>%
     httr2::req_method("POST") %>% httr2::req_body_json(data=psrID)
 
-  preq <- httr2::req_perform(urlreq_ap,verbosity=2)
+  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
   resp <- httr2::resp_body_string(preq)
 
   return(jsonlite::fromJSON(resp) %>% tibble::as_tibble())
@@ -197,12 +198,22 @@ getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
 chunksize=200
 add_IUCN_labels <- function(hdr,labels,chunksize){
 
-  if(chunksize > nrow(labels)){
-    message('chunksize is bigger than length of data altering chunkszie to ', nrow(labels))
+  if(nrow(labels) < 100){
+    message('Data is too small to chunk, submitting all data')
     chunksize = nrow(labels)
+    spl.dt = list(labels)
+  } else {
+
+    if(chunksize > nrow(labels)){
+      message('chunksize is bigger than length of data altering chunkszie to ', nrow(labels))
+      chunksize = nrow(labels)/2
+    } else {
+      spl.dt <- split( labels , cut(1:nrow(labels), round(nrow(labels)/chunksize)))
+
+    }
   }
 
-  spl.dt <- split( labels , cut(1:nrow(labels), round(nrow(labels)/chunksize)))
+
   i = 31
   for (i in 1:length(spl.dt)){
 

@@ -4,7 +4,7 @@ api_key <- "ICyPK2w2Cqd0ljNmirEfffDMiZzAr5t5QeGgoMnlie1k1iYeXOU0UFqUBYWd3ci0k4wG
 api_key = 'e8SVf5H060eyWmB5QLUu0FWhp0fR5GQ8wOsvd0dOSxiZbO2lqbDwAaxeQ2qaumOUZlrS6nXmVw27iTLzpj2AgBicTRB1M6k2tiUO'
 
 # Set auth headers appropriately
-headers <- auth_headers(api_key,okala_url="http://127.0.0.1:8000/api/")
+headers <- auth_headers(api_key,okala_url="https://dev.api.dashboard.okala.io/api/")
 
 # Way to see the project you are pulling and confirm api key is correct
 get_project(hdr=headers)
@@ -29,7 +29,7 @@ labelled_data = getIUCNLabels(hdr=headers,
                               search_term = 'Domestic horse')
 
 # Add labels to IUCN database
-example_data <- 'data/plantae_iucn.json'
+example_data <- 'data/domestic_animals.json'
 example_data <- readLines(example_data)
 example_data <- jsonlite::fromJSON(example_data)
 example_data <-  jsonlite::fromJSON(example_data)
