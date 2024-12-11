@@ -29,7 +29,6 @@ get_project <- function(hdr=headers){
 }
 
 
-
 #' Get project station metadata
 #'
 #' Retrieve all of the station data associated with your project, including video, audio, image, and eDNA data types.
@@ -244,6 +243,7 @@ add_IUCN_labels <- function(hdr,labels,chunksize){
 #' @export A success message as a list
 
 sendupatedlabels <- function(hdr,datachunk) {
+
 
   datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
 
