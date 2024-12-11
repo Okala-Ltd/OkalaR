@@ -298,28 +298,6 @@ push_new_labels <- function(hdr,submission_records,chunksize){
 
 
 
-#' Update label list labels for either bioacoustics or camera
-#'
-#' Labels are derived by using either suggested labels on the platform or by manually
-#' adding labels from the wider database
-#'
-#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
-#' @param labeltype A character vector specifying the label type ('Bioacoustic' or 'Camera')
-#'
-#' @return This function returns a tibble containing project labels
-#'
-#' @export
-
-urlreq_ap <- httr2::req_url_path_append(header$root,"updateMediaLabels", header$key)
-urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
-#
-preq <- httr2::req_perform(urlreq_ap)
-resp <- httr2::resp_body_string(preq)
-
-return(jsonlite::fromJSON(resp))
-
-#
-
 
 
 
