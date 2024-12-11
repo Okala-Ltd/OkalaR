@@ -5,8 +5,6 @@ library('leaflet')
 
 #okala_URL <- "https://dev.api.dashboard.okala.io/api/"
 
-# api_key <- "D2lfE2pxnrWI83daSqYqPcZDDSpwEIGT4lgNrOtv7ML5Qkk7qORwBmgvg7e46wd5MTuaVRwAMzaDuycrfH6Wuxy1Ti0PSFnHFeIF"
-
 #' Initiate root URL with API key
 #'
 #' Creates a base URL object that can be used as a root to call endpoints.This requires a project API key, which can be obtained directly from the Okala dashboard.
@@ -62,7 +60,7 @@ plot_stations <- function(geojson_response){
                                 popup = ~paste("QR code: ",qr_code, "<br>",
                                                "Start time: ",project_system_record_start_timestamp, "<br>",
                                                "End time: ",project_system_record_end_timestamp, "<br>",
-                                               "Record count: ",record_count, "<br>"
+                                               "No. media files: ",record_count, "<br>"
                                 ),
                                 color = "red",
                                 opacity = 0.2,
