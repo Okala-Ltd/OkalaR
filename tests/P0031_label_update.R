@@ -7,11 +7,9 @@ library(tidyverse)
 
 ## Directory ####
 
-setwd("~/Documents/RStudio/OkalaR/")
-
 ## API Functions ####
 
-source("~/Documents/RStudio/OkalaR/R/api.R")
+source("./R/api.R")
 
 ## API Key ####
 
@@ -19,7 +17,7 @@ api_key <- "s92N22o5qqxGzoXW2qBgS8yTNMym6ktM3EUJtOtqh16hl6jy4vV0Jkw5JUdo3Be32STY
 
 ## Pull from API ####
 
-headers <- auth_headers(api_key,okala_url="https://dev.api.dashboard.okala.io/api/")
+headers <- auth_headers(api_key,okala_url="http:localhost:8000/api")
 
 get_project()
 
@@ -42,10 +40,10 @@ project_camera_labels <- get_project_labels(hdr=headers,labeltype='Camera')
 wcs_media_labels <- media_labels %>%
   select(media_file_reference_location,segment_record_id,label_record_id, number_of_individuals)
 
-new_labels <- read_csv("/data/data-2024-12-19T13_55_40.946Z.CSV") %>%
+new_labels <- read_csv("./data/data-2024-12-19T13_55_40.946Z.CSV") %>%
   select(media_file_reference_location,label)
 
-labels <- read_csv("/Volumes/Temporary drop/WCS - Images/P0032_species_ID_list_FINAL.csv")
+labels <- read_csv("P0032_species_ID_list_FINAL.csv")
 
 human_labels <- labels %>%
   select(new_vid_id,species_label,latin_name) %>%
