@@ -17,6 +17,8 @@ api_key <- "s92N22o5qqxGzoXW2qBgS8yTNMym6ktM3EUJtOtqh16hl6jy4vV0Jkw5JUdo3Be32STY
 
 ## Pull from API ####
 
+
+# Will need a new URL for dev here
 headers <- auth_headers(api_key,okala_url="http:localhost:8000/api")
 
 get_project()
@@ -40,10 +42,10 @@ project_camera_labels <- get_project_labels(hdr=headers,labeltype='Camera')
 wcs_media_labels <- media_labels %>%
   select(media_file_reference_location,segment_record_id,label_record_id, number_of_individuals)
 
-new_labels <- read_csv("./data/data-2024-12-19T13_55_40.946Z.CSV") %>%
+new_labels <- read_csv("./project_data_labels/Project_P0032/data-2024-12-19T13_55_40.946Z.CSV") %>%
   select(media_file_reference_location,label)
 
-labels <- read_csv("P0032_species_ID_list_FINAL.csv")
+labels <- read_csv("./project_data_labels/Project_P0032/P0032_species_ID_list_FINAL.csv")
 
 human_labels <- labels %>%
   select(new_vid_id,species_label,latin_name) %>%
@@ -65,10 +67,10 @@ species_to_upload <- human_labels %>%
          "label_id_fk" = label_id) %>%
   mutate_all(as.character)
 
-test <- species_to_upload[1:100,] #%>%
+test <- species_to_upload #%>%
 filter(label_id_fk == 106753)
 
-push_new_labels(hdr=headers, submission_records = test, chunksize=50)
+push_new_labels(hdr=headers, submission_records = species_to_upload, chunksize=50)
 
 
 

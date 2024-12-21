@@ -247,10 +247,10 @@ sendupatedlabels <- function(hdr,datachunk) {
 
   datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
 
-  urlreq_ap <- httr2::req_url_path_append(hdr$root,"updateMediaLabels", hdr$key)
+  urlreq_ap <- httr2::req_url_path_append(hdr$root,"updateSegmentLabels", hdr$key)
   urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
   #
-  preq <- httr2::req_perform(urlreq_ap)
+  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
   resp <- httr2::resp_body_string(preq)
 
   return(jsonlite::fromJSON(resp))
@@ -288,7 +288,8 @@ push_new_labels <- function(hdr,submission_records,chunksize){
   }
 
   spl.dt <- split( submission_records , cut(1:nrow(submission_records), round(nrow(submission_records)/chunksize)))
-
+  spl.dt[1]
+  i=1
   for (i in 1:length(spl.dt)){
 
     sendupatedlabels(hdr,datachunk=spl.dt[[i]])
