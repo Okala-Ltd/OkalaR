@@ -25,7 +25,7 @@ api_key <- "nd8Pfdv7WXyXOFP9l1DUh02ea2R00qa4krDgz22cVv1DBuOIB40PGnMMqEGJioohxecJ
 
 ## remove data file ####
 
-remove_data <- read_csv("remove_data.csv")
+remove_data <- read_csv("/Volumes/Temporary drop/Remove_labels/P0071_TrE_PlaNat/remove_data.csv")
 
 ## Pull from API ####
 
