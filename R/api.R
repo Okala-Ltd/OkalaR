@@ -14,7 +14,14 @@ library('leaflet')
 #' @return This function returns a list containing the root URL and the API key
 #'
 #' @export
-auth_headers <- function(api_key, okala_url="https://dev.api.dashboard.okala.io/api/"){
+auth_headers <- function(api_key, okala_url="https://api.dashboard.okala.io/api/"){
+  root <- httr2::request(okala_url)
+  d = list(key=api_key,
+           root=root)
+  return(d)
+}
+
+auth_headers_dev <- function(api_key, okala_url="https://dev.api.dashboard.okala.io/api/"){
   root <- httr2::request(okala_url)
   d = list(key=api_key,
            root=root)
