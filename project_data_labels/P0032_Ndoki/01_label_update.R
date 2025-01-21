@@ -1,11 +1,11 @@
-## WCS label update ##
-##
+## C0041 - Wildlife Conservation Society ##
+## P0032 Ndoki Survey ##
+## Label Update ##
+## 19 / Dec / 2024 ##
 
 ## Libraries ####
 
 library(tidyverse)
-
-## Directory ####
 
 ## API Functions ####
 
