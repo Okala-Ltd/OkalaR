@@ -3,10 +3,6 @@
 ## Blank species ##
 ## 16 / Jan / 2025 ##
 
-## Directory ####
-
-setwd("~/Documents/RStudio/Cristobal-Scripts/C0046_Univesity_of_Stirling/P0071_Tree_Planat/")
-
 ## Libraries ####
 
 library(tidyverse)
@@ -21,7 +17,7 @@ source("~/Documents/RStudio/OkalaR/R/api.R")
 
 ## Project Key ####
 
-api_key <- "nd8Pfdv7WXyXOFP9l1DUh02ea2R00qa4krDgz22cVv1DBuOIB40PGnMMqEGJioohxecJEd7m3gNyGFjqow6Qplmye2fzqBtS6GHe"
+api_key <- "JdOjO7FcPd3zPXPYQaoQz1NDaIhXPg0HK5IGq7ap2ACAL34cxEVelrflr0iWoMyhh7Qiij3TfLD0ZTNmR27aUb0YYtnvhRcipG26"
 
 ## remove data file ####
 
@@ -41,7 +37,7 @@ media_labels <- get_media_assets(hdr=headers,
                                  datatype="audio",
                                  psrID=stations$project_system_record_id)
 
-media_labels %>% 
+media_labels %>%
   filter(label_id == "-1")
 
 # label_id: 106735 - label: Aves
@@ -66,26 +62,42 @@ project_camera_labels <- get_project_labels(hdr=headers,labeltype='Bioacoustic')
 ## French data set ####
 
 modified_media_labels <- media_labels %>%
-  select(media_file_reference_location,segment_record_id,label_record_id,common_name)
+  select(media_file_reference_location,segment_record_id,label_record_id,common_name,number_of_individuals)
 
-remove_data_2 <- remove_data %>% 
-  select(common_name) %>% 
-  left_join(modified_media_labels) %>% 
+remove_data_2 <- remove_data %>%
+  select(common_name) %>%
+  left_join(modified_media_labels) %>%
   mutate(label_id = "106735") %>%
-  mutate(number_of_individuals = 1,
-         prediction_accuracy = 100) 
+  mutate(prediction_accuracy = 100)
 
 data_to_upload <- remove_data_2 %>%
   select(-c(common_name,media_file_reference_location)) %>%
   rename("segment_record_id_fk" = segment_record_id,
          "label_id_fk" = label_id)
 
-data_to_upload <- data_to_upload %>% 
+data_to_upload <- data_to_upload %>%
   slice(1:100)
+
+## Blank species on 2nd instance ####
+
+modified_media_labels <- media_labels %>%
+  select(media_file_reference_location,segment_record_id,label_record_id,family,label,common_name,label_id, number_of_individuals) %>%
+  mutate( label_id = case_when(family == "Rallidae" ~ 106735,
+                               family == "Scolopacidae" ~ 106735,
+                               label == "Oriolus oriolus" ~ 106735,
+                               T ~ label_id),
+    prediction_accuracy = 100) %>%
+  rename("segment_record_id_fk" = segment_record_id,
+         "label_id_fk" = label_id) %>%
+  filter(label_id_fk == 106735) %>%
+  select(segment_record_id_fk,label_record_id,number_of_individuals,label_id_fk,prediction_accuracy)
+
+test <- modified_media_labels %>%
+  slice(1:10)
 
 ## Push new labels ####
 
-push_new_labels(hdr=headers, submission_records = data_to_upload, chunksize=10)
+push_new_labels(hdr=headers, submission_records = modified_media_labels, chunksize=1000)
 
 media_labels %>% filter(media_file_reference_location == "Cameras/PL9CT2/IMG_0608")
 
