@@ -1,7 +1,7 @@
-## C0132 - Nature Plus ##
-## P0075 - CIB Olam ##
+## C1111 - Fauna Photonics ##
+## P1111 - Pilot Project ##
 ## Blank species ##
-## 29 / Jan / 2025 ##
+## 05 / Feb / 2025 ##
 
 ## Libraries ####
 
@@ -17,7 +17,7 @@ source("~/Documents/RStudio/OkalaR/R/api.R")
 
 ## Project Key ####
 
-api_key <- "LMyyw5FK4bFzUT44yIotKmAO3tIsnROLI9jgNQj0gI37CgARC4rHICjCmwxqeMFshpoDldubI5BAJ919ID7n9CQX5FjMLfkkpKUd"
+api_key <- "xlGFBMOFsElGcSdsemiuMjY6QWDwIQYpDdcNiIDtwzzlZZRBTgJADQiuNZeJZzPELQUHFGE5CPpdPKO7uKTAJ7j0DagnzlPI1y5q"
 
 ## Pull from API ####
 
@@ -33,26 +33,19 @@ media_labels <- get_media_assets(hdr=headers,
                                  datatype="audio",
                                  psrID=stations$project_system_record_id)
 
-# label_id: 106735 - label: Aves
+media_labels %>%
+  filter(label_id == "-1")
 
-labelled_data <- tibble()
-
-for (i in 1:18) {
-
-  message(i)
-
-  labelled_data_sample <-  getIUCNLabels(hdr=headers,
+labelled_data <-  getIUCNLabels(hdr=headers,
                                          limit=10000,
                                          offset=0)
 
-  labelled_data <- labelled_data_sample$data %>%
-    bind_rows(labelled_data)
-
-}
 
 project_camera_labels <- get_project_labels(hdr=headers,labeltype='Bioacoustic')
 
-## Modify media_labels to updates labels ####
+## Media Labels manipulation ####
+
+# label_id: 106735 - label: Aves
 
 modified_media_labels <- media_labels %>%
   select(media_file_reference_location,segment_record_id,label_record_id,common_name,number_of_individuals)
@@ -71,23 +64,6 @@ data_to_upload <- remove_data_2 %>%
 data_to_upload <- data_to_upload %>%
   slice(1:100)
 
-## Blank species on 2nd instance ####
-
-modified_media_labels <- media_labels %>%
-  select(media_file_reference_location,segment_record_id,label_record_id,family,label,common_name,label_id, number_of_individuals) %>%
-  mutate( label_id = case_when(family == "Rallidae" ~ 106735,
-                               family == "Scolopacidae" ~ 106735,
-                               label == "Oriolus oriolus" ~ 106735,
-                               T ~ label_id),
-          prediction_accuracy = 100) %>%
-  rename("segment_record_id_fk" = segment_record_id,
-         "label_id_fk" = label_id) %>%
-  filter(label_id_fk == 106735) %>%
-  select(segment_record_id_fk,label_record_id,number_of_individuals,label_id_fk,prediction_accuracy)
-
-test <- modified_media_labels %>%
-  slice(1:10)
-
 ## Push new labels ####
 
 push_new_labels(hdr=headers, submission_records = modified_media_labels, chunksize=1000)
@@ -97,4 +73,5 @@ media_labels %>% filter(media_file_reference_location == "Cameras/PL9CT2/IMG_060
 ## segment_record_id is from the data set on the dashboard, I need to match the old file_path with the new one
 ## I need to find the proper label from project_camera_label (IUCN) to match it with the label_id
 ## add a new label_id to the actual video from the server
+
 
