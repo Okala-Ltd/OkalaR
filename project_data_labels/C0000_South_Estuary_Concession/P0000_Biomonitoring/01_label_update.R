@@ -13,7 +13,7 @@ library(leaflet)
 
 ## API Functions ####
 
-source("~/Documents/RStudio/OkalaR/R/api.R")
+source("R/api.R")
 
 ## Project Key ####
 
