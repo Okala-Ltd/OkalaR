@@ -19,7 +19,7 @@ source("R/api.R")
 ## Project Key ####
 
 # Cristobal's API key used for authenticating requests to the Okala API
-api_key <- "6BGqxoESP6m21UvVP4Ov4GwP967lQqqLGuBx2euBvPpX0FnGFRLSMtNmczJn1wrOuzXllQGed2VfA1k3BATt1w72j405gLKCneK4"
+api_key <- "j5FdBAhI6Y4hBGLymqXNZkUdIegpCi1NFq3aLwZ1yfuzPWDYqpvPCN9E904kJA1l4tsu6p83FOV88XQpDyuK0TLB2L42S5fWSOq3"
 
 ## Pull from API ####
 
@@ -30,7 +30,7 @@ headers <- auth_headers(api_key, okala_url = "https://api.dashboard.okala.io/api
 get_project()
 
 # Fetch station information for the project
-# datatype can be "audio", "video" or "images" depending on the media type
+# datatype can be "audio", "video" or "image" depending on the media type
 stations <- get_station_info(hdr = headers, datatype = "audio")
 
 # Visualize the station data on an interactive map
@@ -38,7 +38,7 @@ plot_stations(stations)
 
 ## Extract media labels ####
 
-# datatype can be "audio", "video" or "images" depending on the media type
+# datatype can be "audio", "video" or "image" depending on the media type
 media_labels <- get_media_assets(hdr = headers,
                                  datatype = "audio",
                                  psrID = stations$project_system_record_id)
@@ -51,7 +51,7 @@ labelled_data <- getIUCNLabels(hdr = headers,
 
 # Fetch project-specific labels
 # labeltype can be "Bioacoustic" or "Camera"
-project_camera_labels <- get_project_labels(hdr = headers, labeltype = 'Bioacoustic')
+project_camera_labels <- get_project_labels(hdr = headers, labeltype = 'Camera')
 
 ## Modify media_labels to update labels ####
 
@@ -67,6 +67,7 @@ modified_media_labels <- media_labels %>%
 
 # label_id: 106735 -> label: Aves
 # label_id: -1 -> label: Blank
+
 # For bioacoustics don't blank them, it cause an error, update the label to "Aves"
 # Update `label_id` to 106735 and `prediction_accuracy` to 100 for specified species given by Robin
 modified_media_labels <- modified_media_labels %>%
