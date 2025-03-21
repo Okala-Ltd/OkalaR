@@ -17,7 +17,7 @@ source("R/api.R")
 ## API Key ####
 
 # Cristobal's API key used for authenticating requests to the Okala API
-api_key <- "ihFv9bE5gqeH4XXuaoHvmbkjcuYw34N0et0paNCnFlh0WrP9DjyGI2YlZB02NRCDfJCA0qOPckQkrL3ivO6o0zDCIhfXN60xy3yJ"
+api_key <- "wBBR9NRSAVSV6jhdE3QN21px3WWbIkUnS7YpP8bcuBscL3IFHgi9hO4VxGgrpLO5rLRaNgyM5No5yuqsJpgeJHGOm5dWstpCkDbw"
 
 ## Pull from API ####
 
@@ -41,26 +41,36 @@ media_labels <- get_media_assets(hdr = headers,
                                  datatype = "audio",
                                  psrID = stations$project_system_record_id)
 
+media_labels <- media_labels %>%
+  mutate(media_file_reference_location = str_remove(media_file_reference_location, "/Bioacoustics")) %>%
+  select(media_file_reference_location, segment_start_timestamp)
+
 ## Extract file list ####
+
+species_list <- read_csv("/Volumes/Staging area/C0046_University_of_Stirling/P0071_TreE_PlaNat_bioacoustic_data/Classified_species_list/P0071_bioacoustics_species_list.csv") %>%
+  distinct(qr_code, .keep_all = T)
 
 file_path <- "/Volumes/Staging area/C0046_University_of_Stirling/P0071_TreE_PlaNat_bioacoustic_data/Bioacoustics/"
 
 file_list <- list.files(file_path, full.names = T, recursive = T)
 
-exif_data <- read_exif(file_list,tags = c("SourceFile","FileModifyDate","Comment"), quiet = F)
-
-bioacoustic_data <- exif_data %>%
-  separate(SourceFile, into = c(NA,NA,NA,NA,NA,NA,NA,"qr_code","file_name"),sep = "/",remove = F) %>%
-  mutate(media_file_reference_location = str_remove(SourceFile, "/Volumes/Staging area/C0046_University_of_Stirling/P0071_TreE_PlaNat_bioacoustic_data/Bioacoustics/")) %>%
-  left_join(media_labels %>% select(media_file_reference_location, segment_start_timestamp)) %>%
-  relocate(Comment, .after = segment_start_timestamp) %>%
+bioacoustic_data <- file_list %>%
+  as_tibble() %>%
+  separate(value, into = c(NA,NA,NA,NA,NA,NA,NA,"qr_code","file_name"),sep = "/",remove = F) %>%
+  mutate(media_file_reference_location = str_remove(value, "/Volumes/Staging area/C0046_University_of_Stirling/P0071_TreE_PlaNat_bioacoustic_data/Bioacoustics/")) %>%
+  left_join(media_labels) %>%
   distinct(media_file_reference_location, .keep_all = T)
 
-bioacoustic_data %>%
+metadata <- read_csv("/Volumes/Staging area/C0046_University_of_Stirling/P0071_TreE_PlaNat_bioacoustic_data/Metadata/AM_Days_to_check.csv") %>%
+  mutate(qr_code = paste0(site.code, AR.code)) %>%
+  select(qr_code) %>%
+  left_join(bioacoustic_data)
+
+metadata %>%
   group_by(qr_code) %>%
   summarize(
     total_files = n(),  # Total number of files
-    na_count = sum(!is.na(segment_start_timestamp))  # Count of NA in segment_start_timestamp
+    na_count = sum(!is.na(segment_start_timestamp)),   # Count of NA in segment_start_timestamp
   ) %>%
   arrange((qr_code))  %>%
   print( n = 30)

@@ -17,11 +17,11 @@ source("~/Documents/RStudio/OkalaR/R/api.R")
 
 ## Project Key ####
 
-api_key <- "JdOjO7FcPd3zPXPYQaoQz1NDaIhXPg0HK5IGq7ap2ACAL34cxEVelrflr0iWoMyhh7Qiij3TfLD0ZTNmR27aUb0YYtnvhRcipG26"
+api_key <- "wBBR9NRSAVSV6jhdE3QN21px3WWbIkUnS7YpP8bcuBscL3IFHgi9hO4VxGgrpLO5rLRaNgyM5No5yuqsJpgeJHGOm5dWstpCkDbw"
 
 ## remove data file ####
 
-remove_data <- read_csv("/Volumes/Temporary drop/Remove_labels/P0071_TrE_PlaNat/remove_data.csv")
+remove_data <- read_csv("/Volumes/Temporary drop/Remove_labels/P0071_TreE_PlaNat/remove_data.csv")
 
 ## Pull from API ####
 
@@ -37,29 +37,18 @@ media_labels <- get_media_assets(hdr=headers,
                                  datatype="audio",
                                  psrID=stations$project_system_record_id)
 
-media_labels %>%
-  filter(label_id == "-1")
 
 # label_id: 106735 - label: Aves
 
 labelled_data <- tibble()
 
-for (i in 1:18) {
-
-  message(i)
-
-  labelled_data_sample <-  getIUCNLabels(hdr=headers,
+labelled_data <-  getIUCNLabels(hdr=headers,
                                   limit=10000,
                                   offset=0)
 
-  labelled_data <- labelled_data_sample$data %>%
-    bind_rows(labelled_data)
-
-}
-
 project_camera_labels <- get_project_labels(hdr=headers,labeltype='Bioacoustic')
 
-## French data set ####
+
 
 modified_media_labels <- media_labels %>%
   select(media_file_reference_location,segment_record_id,label_record_id,common_name,number_of_individuals)
@@ -73,10 +62,11 @@ remove_data_2 <- remove_data %>%
 data_to_upload <- remove_data_2 %>%
   select(-c(common_name,media_file_reference_location)) %>%
   rename("segment_record_id_fk" = segment_record_id,
-         "label_id_fk" = label_id)
+         "label_id_fk" = label_id) %>%
+  drop_na()
 
-data_to_upload <- data_to_upload %>%
-  slice(1:100)
+test <- data_to_upload %>%
+  slice(1:10)
 
 ## Blank species on 2nd instance ####
 
@@ -97,13 +87,8 @@ test <- modified_media_labels %>%
 
 ## Push new labels ####
 
-push_new_labels(hdr=headers, submission_records = modified_media_labels, chunksize=1000)
-
-media_labels %>% filter(media_file_reference_location == "Cameras/PL9CT2/IMG_0608")
+push_new_labels(hdr=headers, submission_records = data_to_upload, chunksize=50)
 
 ## segment_record_id is from the data set on the dashboard, I need to match the old file_path with the new one
 ## I need to find the proper label from project_camera_label (IUCN) to match it with the label_id
 ## add a new label_id to the actual video from the server
-
-
-
