@@ -21,9 +21,9 @@ api_key <- "opsBo5Hfoo5OBpJLokwNnVJjYXbvDggHspCLIiZFGQYxkkufRmpADoLoIbZnPbnWoq4k
 
 ## Pull from API ####
 
-770621
+# headers <- auth_headers(api_key,okala_url="https://api.dashboard.okala.io/api/")
 
-headers <- auth_headers(api_key,okala_url="https://api.dashboard.okala.io/api/")
+headers <- auth_headers(api_key,okala_url="http://localhost:8000/api/")
 
 get_project()
 
@@ -33,7 +33,7 @@ plot_stations(stations)
 
 media_labels <- get_media_assets(hdr=headers,
                                   datatype="video",
-                                  psrID=video_stations$project_system_record_id)
+                                  psrID=stations$project_system_record_id)
 
 labelled_data <-  getIUCNLabels(hdr=headers,
                                 limit=10000,
