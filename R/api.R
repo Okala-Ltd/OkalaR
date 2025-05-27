@@ -62,8 +62,8 @@ plot_stations <- function(geojson_response){
       leaflet::addTiles() %>%
       leaflet::addCircleMarkers(lat=sf::st_coordinates(geojson_response)[,2],
                                 lng=sf::st_coordinates(geojson_response)[,1],
-                                label = ~paste(qr_code),
-                                popup = ~paste("QR code: ",qr_code, "<br>",
+                                label = ~paste(device_id),
+                                popup = ~paste("QR code: ",device_id, "<br>",
                                                "Start time: ",project_system_record_start_timestamp, "<br>",
                                                "End time: ",project_system_record_end_timestamp, "<br>",
                                                "No. media files: ",record_count, "<br>"
