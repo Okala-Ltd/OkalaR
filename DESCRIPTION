@@ -4,7 +4,17 @@ Title: API wrapper around the okala dashboard interface
 Version: 1.0
 Authors@R: 
     person("Adam", "Varley", , "adam@okala.io", role = c("aut", "cre"))
-Description: Allows basic reading and writing of data to and from your projecton the okala dashboard
+Description: Allows basic reading and writing of data to and from your project on the okala dashboard
 License: Apache License 2.0
 Encoding: UTF-8
 RoxygenNote: 7.3.2
+Imports:
+    httr2,
+    jsonlite,
+    jsonify,
+    leaflet,
+    geojsonsf,
+    tibble,
+    dplyr,
+    sf,
+    scales
