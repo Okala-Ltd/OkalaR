@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+okalaR.Rcheck
 /data
 /R/project_file.R
 /project_data_labels
