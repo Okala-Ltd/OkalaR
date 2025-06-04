@@ -1,10 +1,11 @@
 source('R/api.R')
 
-api_key <- "ICyPK2w2Cqd0ljNmirEfffDMiZzAr5t5QeGgoMnlie1k1iYeXOU0UFqUBYWd3ci0k4wGRNAkdFhSKhZEyGMddT91sOkraa87dVPM"
-api_key = 'e8SVf5H060eyWmB5QLUu0FWhp0fR5GQ8wOsvd0dOSxiZbO2lqbDwAaxeQ2qaumOUZlrS6nXmVw27iTLzpj2AgBicTRB1M6k2tiUO'
+# Your api key is found in your project settings on the Okala dashboard.
+# You can find the Okala dashboard here: https://dashboard.okala.io/
 
+api <- 'your_api_key_here' # Replace with your actual API key
 # Set auth headers appropriately
-headers <- auth_headers(api_key,okala_url="https://dev.api.dashboard.okala.io/api/")
+headers <- auth_headers(api_key,okala_url="https://api.dashboard.okala.io/api/")
 
 # Way to see the project you are pulling and confirm api key is correct
 get_project(hdr=headers)
