@@ -53,7 +53,7 @@ segment_record_to_change = data.frame(segment_record_id_fk = media_labels[1,'seg
 submission_frame <- data.frame(segment_record_id_fk = segment_record_to_change,label_id_fk = new_label_id, number_of_individuals = 1)
 
 
-push_new_labels(hdr=headers,submission_records = submission_frame,chunksize=30))
+push_new_labels(hdr=headers,submission_records = submission_frame,chunksize=30)
 
 
 
