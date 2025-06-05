@@ -74,6 +74,7 @@ auth_headers_dev <- function(api_key, okala_url="https://dev.api.dashboard.okala
 #'
 #' @author
 #' Adam Varley
+#' @export
 get_project <- function(hdr=headers){
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"getProject",hdr$key)
   preq <- httr2::req_perform(urlreq_ap)
