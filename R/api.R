@@ -3,7 +3,28 @@ library(jsonlite)
 library(jsonify)
 library('leaflet')
 
-#okala_URL <- "https://dev.api.dashboard.okala.io/api/"
+
+
+#' @title Get API key from environment variable
+#'
+#' @description
+#' Retrieves the API key from the environment variable OKALA_API_KEY. If the variable is not set, an error is raised.
+#'
+#' @return The API key as a character string
+#' 
+#' @examples
+#' \dontrun{
+#'   api_key <- get_key()
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+get_key <- function() {
+  api_key <- Sys.getenv("OKALA_API_KEY")
+  if (api_key == "") stop("OKALA_API_KEY environment variable not set.")
+  return(api_key)
+}
 
 #' @title Initiate root URL with API key
 #'
@@ -395,10 +416,10 @@ push_new_labels <- function(hdr,submission_records,chunksize){
 
 
 # Internal function used to chunk media metadata
-send_media_chunks <- function(media_metadata, chunksize) {
+send_media_chunks <- function(hdr, datachunk) {
     datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
 
-    urlreq_ap <- httr2::req_url_path_append(hdr$root,"updateMediaRecords", hdr$key)
+    urlreq_ap <- httr2::req_url_path_append(hdr$root,"updateTimestamps", hdr$key)
     urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
     #
     preq <- httr2::req_perform(urlreq_ap,verbosity=3)
