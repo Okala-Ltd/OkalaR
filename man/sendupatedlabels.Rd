@@ -2,22 +2,27 @@
 % Please edit documentation in R/api.R
 \name{sendupatedlabels}
 \alias{sendupatedlabels}
-\title{sendupdated labels a subfunction used by push_new_labels}
+\title{Send updated labels (subfunction for push_new_labels)}
 \usage{
 sendupatedlabels(hdr, datachunk)
 }
 \arguments{
-\item{hdr}{hdr A base URL provided and valid API key returned by the function \link{auth_headers}}
+\item{hdr}{A base URL provided and valid API key returned by the function \link{auth_headers}}
 
-\item{A}{tibble containing the records to be submitted}
-
-\item{limit}{An integer specifying the limit for the query}
-
-\item{search_term}{A character vector specifying the search term to be used (Can be left our for ful search)}
+\item{datachunk}{A tibble containing the records to be submitted}
 }
 \value{
-a list containing tabular data and pagination information for iterative calls
+A list containing tabular data and pagination information for iterative calls
 }
 \description{
-adding labels from the wider database
+Submits updated labels to the platform.
+}
+\examples{
+\dontrun{
+  sendupatedlabels(headers, datachunk)
+}
+
+}
+\author{
+Adam Varley
 }

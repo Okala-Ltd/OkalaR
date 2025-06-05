@@ -241,22 +241,7 @@ add_project_labels <- function(hdr,
   return(resp)
 }
 
-
-#' @title Replace NULLs with NAs in a data frame
-#'
-#' @description
-#' Utility function to replace NULL values with NA in a data frame.
-#'
-#' @param df A data frame
-#'
-#' @return The data frame with NULLs replaced by NAs
-#'
-#' @examples
-#' df <- data.frame(a=c(1,NULL,3))
-#' replace_nas(df)
-#'
-#' @author
-#' Adam Varley
+# Utility function to replace NULLs with NAs in a data frame
 replace_nas <- function(df){
   df[sapply(df,function(x) is.null(x))] = NA
   return(df)

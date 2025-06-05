@@ -12,9 +12,17 @@ get_project_labels(hdr, labeltype = c("Bioacoustic", "Camera"))
 \item{labeltype}{A character vector specifying the label type ('Bioacoustic' or 'Camera')}
 }
 \value{
-This function returns a tibble containing project labels
+A tibble containing project labels
 }
 \description{
-Labels are derived by using either suggested labels on the platform or by manually
-adding labels from the wider database
+Labels are derived by using either suggested labels on the platform or by manually adding labels from the wider database.
+}
+\examples{
+\dontrun{
+  labels <- get_project_labels(headers, labeltype='Camera')
+}
+
+}
+\author{
+Adam Varley
 }

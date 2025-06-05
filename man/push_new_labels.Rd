@@ -9,24 +9,22 @@ push_new_labels(hdr, submission_records, chunksize)
 \arguments{
 \item{hdr}{A base URL provided and valid API key returned by the function \link{auth_headers}}
 
-\item{submission_records}{A tibble containing the records to be submitted
-
-[
-  {
-    "segment_record_id_fk": 0,
-    "label_id_fk": 0,
-    "number_of_individuals": 1,
-    "prediction_accuracy": 100,
-   "label_record_id": 0
-  }
-]}
+\item{submission_records}{A tibble containing the records to be submitted}
 
 \item{chunksize}{An integer specifying the chunk size for the submission}
 }
 \value{
-a list containing tabular data and pagination information for iterative calls
+A list containing tabular data and pagination information for iterative calls
 }
 \description{
-Labels are derived by using either suggested labels on the platform or by manually
-adding labels from the wider database
+Push new labels to the platform in chunks.
+}
+\examples{
+\dontrun{
+  push_new_labels(headers, submission_records, chunksize=30)
+}
+
+}
+\author{
+Adam Varley
 }

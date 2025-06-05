@@ -12,8 +12,17 @@ get_station_info(hdr, datatype = c("video", "audio", "image", "eDNA"))
 \item{datatype}{A character vector of data types c("video","audio","image","eDNA")}
 }
 \value{
-This function returns an sf object containing station metadata and geometry
+An sf object containing station metadata and geometry
 }
 \description{
 Retrieve all of the station data associated with your project, including video, audio, image, and eDNA data types.
+}
+\examples{
+\dontrun{
+  stations <- get_station_info(headers, datatype="video")
+}
+
+}
+\author{
+Adam Varley
 }

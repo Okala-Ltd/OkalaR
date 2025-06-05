@@ -8,10 +8,21 @@ auth_headers(api_key, okala_url = "https://api.dashboard.okala.io/api/")
 }
 \arguments{
 \item{api_key}{A valid API key}
+
+\item{okala_url}{The base URL for the Okala API (default: production)}
 }
 \value{
-This function returns a list containing the root URL and the API key
+A list containing the root URL and the API key
 }
 \description{
-Creates a base URL object that can be used as a root to call endpoints.This requires a project API key, which can be obtained directly from the Okala dashboard.
+Creates a base URL object that can be used as a root to call endpoints. This requires a project API key, which can be obtained directly from the Okala dashboard.
+}
+\examples{
+\dontrun{
+  headers <- auth_headers("your_api_key")
+}
+
+}
+\author{
+Adam Varley
 }
