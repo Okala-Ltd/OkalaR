@@ -2,7 +2,7 @@
 % Please edit documentation in R/api.R
 \name{add_project_labels}
 \alias{add_project_labels}
-\title{Add project labels for either bioacoustics or camera so labeller have access to them in the Dashboard}
+\title{Add project labels for either bioacoustics or camera}
 \usage{
 add_project_labels(hdr, labeltype = c("Bioacoustic", "Camera"), labels)
 }
@@ -11,12 +11,20 @@ add_project_labels(hdr, labeltype = c("Bioacoustic", "Camera"), labels)
 
 \item{labeltype}{A character vector specifying the label type ('Bioacoustic' or 'Camera')}
 
-\item{labels}{A label object list like specifying the labels to be added}
+\item{labels}{A label object list specifying the labels to be added}
 }
 \value{
-This function returns a tibble containing project labels
+A success message as a list
 }
 \description{
-Labels are derived by using either suggested labels on the platform or by manually
-adding labels from the wider database
+Add labels so labellers have access to them in the Dashboard. Labels are derived by using either suggested labels on the platform or by manually adding labels from the wider database.
+}
+\examples{
+\dontrun{
+  add_project_labels(headers, labeltype='Camera', labels=my_labels)
+}
+
+}
+\author{
+Adam Varley
 }
