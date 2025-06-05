@@ -3,7 +3,28 @@ library(jsonlite)
 library(jsonify)
 library('leaflet')
 
-#okala_URL <- "https://dev.api.dashboard.okala.io/api/"
+
+
+#' @title Get API key from environment variable
+#'
+#' @description
+#' Retrieves the API key from the environment variable OKALA_API_KEY. If the variable is not set, an error is raised.
+#'
+#' @return The API key as a character string
+#' 
+#' @examples
+#' \dontrun{
+#'   api_key <- get_key()
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+get_key <- function() {
+  api_key <- Sys.getenv("OKALA_API_KEY")
+  if (api_key == "") stop("OKALA_API_KEY environment variable not set.")
+  return(api_key)
+}
 
 #' @title Initiate root URL with API key
 #'
@@ -340,24 +361,8 @@ add_IUCN_labels <- function(hdr,labels,chunksize){
 }
 
 
-#' @title Send updated labels (subfunction for push_new_labels)
-#'
-#' @description
-#' Submits updated labels to the platform.
-#'
-#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
-#' @param datachunk A tibble containing the records to be submitted
-#'
-#' @return A list containing tabular data and pagination information for iterative calls
-#'
-#' @examples
-#' \dontrun{
-#'   sendupatedlabels(headers, datachunk)
-#' }
-#'
-#' @author
-#' Adam Varley
-#' @export
+# Internally used function to send updated labels in chunks
+
 sendupatedlabels <- function(hdr,datachunk) {
 
 
@@ -408,6 +413,55 @@ push_new_labels <- function(hdr,submission_records,chunksize){
   }
 }
 
+
+
+# Internal function used to chunk media metadata
+send_media_chunks <- function(hdr, datachunk) {
+    datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
+
+    urlreq_ap <- httr2::req_url_path_append(hdr$root,"updateTimestamps", hdr$key)
+    urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
+    #
+    preq <- httr2::req_perform(urlreq_ap,verbosity=3)
+    resp <- httr2::resp_body_string(preq)
+
+    return(jsonlite::fromJSON(resp))
+}
+
+
+#' @title Push new timestamps to the platform in chunks
+#'
+#' @description
+#' Push new timestamps to the platform in chunks.
+#'
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param media_metadata A tibble containing the media metadata to be submitted
+#' @param chunksize An integer specifying the chunk size for the submission
+#'
+#' @return A success message as a list
+#'
+#' @examples
+#' \dontrun{
+#'   push_new_timestamps(headers, media_metadata, chunksize=100)
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+push_new_timestamps <- function(hdr, media_metadata, chunksize) {
+    if(chunksize > nrow(media_metadata)){
+        message('chunksize is bigger than length of data altering chunkszie to ', nrow(media_metadata))
+        chunksize = nrow(media_metadata)
+    }
+
+    spl.dt <- split( media_metadata , cut(1:nrow(media_metadata), round(nrow(media_metadata)/chunksize)))
+    i=1
+    for (i in 1:length(spl.dt)){
+
+        send_media_chunks(hdr,spl.dt[[i]])
+        message('submitted ',i*chunksize,' timestamps of ', nrow(media_metadata))
+    }
+}
 
 
 

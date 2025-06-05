@@ -55,3 +55,22 @@ We welcome contributions! Please follow these best practices:
 
 For questions or issues, please open an [issue](https://github.com/your-org/okalaR/issues) on GitHub.
 
+## Building the Package
+
+Change the version number in the DESCRIPTION file
+
+To build the package locally, use the following command in your R console:
+
+```r
+devtools::build()
+```
+
+This will create a `.tar.gz` file that you can install or distribute.
+
+for CRAN distribution checking 
+
+R CMD check ~.tar.gz
+
+
+
+
