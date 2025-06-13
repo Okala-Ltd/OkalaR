@@ -19,6 +19,13 @@ This tutorial demonstrates how to use the `okalaR` package to interact with the 
 
 Your API key is found in your project settings on the Okala dashboard: [https://dashboard.okala.io/](https://dashboard.okala.io/)
 
+```{r clustered_farms, echo = F, out.width= "55%", fig.align = 'left'}
+knitr::include_graphics("../Images/API_key.png")
+
+```
+
+Then you have to create an environmental variable in your console called "OKALA_API_KEY". Your API key depends on which project you are
+
 ```{r auth, eval=FALSE}
 api_key <- get_key()
 headers <- auth_headers(api_key, okala_url = "https://api.dashboard.okala.io/api/")
@@ -26,11 +33,15 @@ headers <- auth_headers(api_key, okala_url = "https://api.dashboard.okala.io/api
 
 ## Get Project Information
 
+This function helps confirm which project you are working on in the dashboard
+
 ```{r get-project, eval=FALSE}
 get_project(hdr = headers)
 ```
 
 ## Get Station Information
+
+`datatype`: Specifies the type of data to retrieve ("video","image" or "audio")
 
 ```{r get-stations, eval=FALSE}
 stations <- get_station_info(hdr = headers, datatype = "video")
@@ -39,6 +50,8 @@ plot_stations(stations)
 
 ## Get Media Labels for Sensors
 
+Retrieve labels and metadata for all processed files. `datatype`: Specifies the data type ("video" in this case), `psrID`: Links to the project system record ID from the stations
+
 ```{r get-media-labels, eval=FALSE}
 media_labels <- get_media_assets(hdr = headers,
                                  datatype = "video",
@@ -46,6 +59,9 @@ media_labels <- get_media_assets(hdr = headers,
 ```
 
 ## Get Project Labels
+
+Retrieve all taxonomic labels associated with the project
+`labeltype`: Filters the labels to include only those of type "Camera" and "Bioacoustics"
 
 ```{r get-project-labels, eval=FALSE}
 project_camera_labels <- get_project_labels(hdr = headers, labeltype = 'Camera')
@@ -65,7 +81,6 @@ labelled_data <- getIUCNLabels(hdr = headers,
 ```{r add-iucn-labels, eval=FALSE}
 example_data <- 'data/domestic_animals.json'
 example_data <- readLines(example_data)
-example_data <- jsonlite::fromJSON(example_data)
 example_data <- jsonlite::fromJSON(example_data)
 example_data <- example_data[example_data$species != 'NA', ]
 example_data$class <- example_data$class_
