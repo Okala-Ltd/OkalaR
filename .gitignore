@@ -8,4 +8,4 @@ okalaR.Rcheck
 /project_data_labels
 okalaR.Rproj
 renv/
-
+.Renviron

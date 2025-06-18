@@ -13,7 +13,7 @@ library(jsonlite)
 
 # Getting Started
 
-This tutorial demonstrates how to use the `okalaR` package to interact with the Okala dashboard API.
+This tutorial demonstrates how to use the `okalaR` package to interact with the Okala dashboard API. With `okalaR`, you can retrieve, manage, and analyze data efficiently using R.
 
 ## Authentication
 
@@ -24,11 +24,36 @@ knitr::include_graphics("../Images/API_key.png")
 
 ```
 
-Then you have to create an environmental variable in your console called "OKALA_API_KEY". Your API key depends on which project you are
+To use the `OKALA_API_KEY` in your R package, you need to create an environment variable to store your API key. The API key depends on the project you are working on.
 
+**Step 1: Open Your Terminal:**
+Navigate to your system terminal (e.g., Command Prompt, Terminal, or shell interface).
+
+**Step 2: Create or Open the `.Renviron` File:**
+In your terminal, navigate to your home directory or your project directory. Then, create or open a file named `.Renviron` using a text editor. For example:
+`bash nano ~/.Renviron`
+
+**Step 3: Add your API Key:** Inside the .Renviron file, add the line `OKALA_API_KEY=api_key_value`
+
+**Step 4: Save and Exit:** Ensure the .Renviron file is save in the correct directory
+
+**Step 5: Restart Your R Session:** Restart your R session to load the new environment variable. Alternatively, you can reload the .Renviron file manually in R using the following command:
+```{r, eval = FALSE}
+
+readRenviron("~/.Renviron")
+
+```
+**Step 6: Verify the Environment Variable:** To ensure the variable is correctly configured, run this command in your R console:
+
+```{r, eval = FALSE}
+Sys.getenv("OKALA_API_KEY")
+```
+If everything is set up properly, it should return your API key.
+
+Now, you should be able to run the following functions.
 ```{r auth, eval=FALSE}
 api_key <- get_key()
-headers <- auth_headers(api_key, okala_url = "https://api.dashboard.okala.io/api/")
+headers <- auth_headers(api_key)
 ```
 
 ## Get Project Information
@@ -67,36 +92,20 @@ Retrieve all taxonomic labels associated with the project
 project_camera_labels <- get_project_labels(hdr = headers, labeltype = 'Camera')
 ```
 
-## Get IUCN Labels
+## Retrieve All Possible Taxonomic Labels
+
+The `getIUCNLabels` function retrieves taxonomic labels from the IUCN database.
+
+- **`limit`**: Specifies the maximum number of labels to retrieve.
+- **`search_term`**: Filters the results by the specified Latin name. To retrieve all labels without filtering, omit this parameter or set it to `NULL`.
+- **`offset`**: Determines the starting position for the results, useful for handling large datasets.
+
 
 ```{r get-iucn-labels, eval=FALSE}
 labelled_data <- getIUCNLabels(hdr = headers,
                               limit = 2000,
                               offset = 0,
-                              search_term = 'Domestic horse')
+                              search_term = 'Panthera pardus')
 ```
 
-## Add Labels to IUCN Database
 
-```{r add-iucn-labels, eval=FALSE}
-example_data <- 'data/domestic_animals.json'
-example_data <- readLines(example_data)
-example_data <- jsonlite::fromJSON(example_data)
-example_data <- example_data[example_data$species != 'NA', ]
-example_data$class <- example_data$class_
-example_data$extant_country_list <- NA
-example_data$iucn_redlist_status[example_data$iucn_redlist_status == 'Extinct In The Wild'] <- 'Extinct in the Wild'
-example_data$iucn_redlist_status <- gsub('Lower Risk/', '', example_data$iucn_redlist_status)
-example_data$iucn_redlist_status <- gsub('Conservation Dependent', 'Not Evaluated', example_data$iucn_redlist_status)
-
-add_IUCN_labels(hdr = headers, labels = example_data, chunksize = 500)
-```
-
-## Update Existing Labels on the Platform
-
-```{r update-labels, eval=FALSE}
-new_label_id <- project_camera_labels[which(project_camera_labels$common_name == 'Uneven-toothed Rat'), 'label_id']
-segment_record_to_change <- data.frame(segment_record_id_fk = media_labels[1, 'segment_record_id'], label_id_fk = 1)
-submission_frame <- data.frame(segment_record_id_fk = segment_record_to_change, label_id_fk = new_label_id, number_of_individuals = 1)
-push_new_labels(hdr = headers, submission_records = submission_frame, chunksize = 30)
-```

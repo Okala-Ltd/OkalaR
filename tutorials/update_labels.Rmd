@@ -1,0 +1,142 @@
+---
+title: "OkalaR Package Tutorial"
+author: "Adam Varley & Cristobal Salamé"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r files, echo=FALSE, results='hide', message=FALSE}
+
+library(tidyverse)
+library(okalaR)
+
+api_key <- get_key()
+
+headers <- auth_headers(api_key)
+
+stations <- get_station_info(hdr = headers, datatype = "video")
+
+project_camera_labels <- get_project_labels(hdr = headers, labeltype = 'Camera')
+
+```
+
+# Update Existing Labels on the Platform
+
+This tutorial guides you through the process of updating labels, prediction accuracy, and the number of individuals associated with your media files on the platform.
+
+## Prepare the data for label updates
+
+### Find the new label ID
+
+Every species is identified by a unique `label_id` in the system. To update your media files, you need the `label_id` of the new species label. Use the `project_camera_labels` function to search for the label(s) you want to use and filter the results by the species name. 
+
+The `label_id` is essential because the API requires it to recognize and apply the label updates.
+
+```{r get-label-id, echo = TRUE}
+# Search for the new label ID for "Loxodonta cyclotis"
+project_camera_labels %>% 
+  filter(label == "Loxodonta cyclotis")
+```
+
+###  Extract relevant information from the media file information
+
+To identify the files requiring updates, retrieve metadata using the `get_media_assets` function. This function provides information about all media files in the project.
+
+```{r media labels, echo = T, results='hide', message=FALSE}
+
+# Retrieve media file metadata
+
+media_labels <- get_media_assets(hdr = headers,
+                                 datatype = "video",
+                                 psrID = stations$project_system_record_id)
+
+```
+
+Filter the data to isolate files associated with the specific camera you want to update. For example, if camera "00094" is mislabeled, use the media_file_reference_location variable to filter these files.
+
+``` {r, echo=T}
+
+
+# Filter files from camera "00094"
+media_labels <- media_labels %>% 
+  separate(media_file_reference_location, 
+           into = c(NA, NA, NA, NA, NA, "device_id", NA, "file_name"), 
+           sep = "/", 
+           remove = FALSE) %>% 
+  filter(device_id == "00094")
+
+media_labels
+```
+
+This narrows the dataset to the specific files requiring updates.
+
+### Add or modify a new label ID
+
+Now that you’ve isolated the files to update, modify their `label_id` column to reflect the new species. For example, if the `label_id` for *Loxodonta cyclotis* is 33030, update the column accordingly.
+
+``` {r label id modified, echo = T}
+
+# Update the label ID for the new species
+media_labels <- media_labels %>% 
+  mutate(label_id = 33030)
+
+media_labels
+
+```
+
+This ensures that the correct species label is applied to the selected files.
+
+### Rename and select columns to match the expected format for updating labels
+
+The API requires the data to be in a specific format. You need to rename certain columns and retain only the following variables for the update:
+
+- `segment_record_id_fk`
+- `label_id_fk`
+- `label_record_id`
+- `number_of_individuals`
+- `prediction_accuracy`
+
+
+```{r echo = T}
+# Prepare the data for submission
+media_labels <- media_labels %>% 
+   rename("segment_record_id_fk" = segment_record_id,         
+         "label_id_fk" = label_id) %>%
+   select(segment_record_id_fk, label_id_fk, label_record_id, number_of_individuals, prediction_accuracy)
+
+media_labels
+
+```
+This step ensures the data is in the correct structure for submission.
+
+## Push New Labels
+
+### Submit the updated labels to the dashboard
+
+Use the `push_new_labels` function to submit the updates to the platform. This function sends the data in batches, defined by the chunksize parameter.
+
+**`chunksize`**: The number of records to submit in each batch (the chunksize have to lower than the actual tibble).
+
+**`hdr`**: Authentication headers.
+
+**`submission_records`**: Data to be submitted.
+
+``` {r echo = T, results = 'hide'}
+
+push_new_labels(hdr = headers, submission_records = media_labels, chunksize = 2)
+
+```
+
+After submission, you can verify the updates by fetching the media assets again.
+
+``` {r echo = T, results='hide', message=FALSE}
+
+media_labels <- get_media_assets(hdr = headers,
+                                 datatype = "video",
+                                 psrID = stations$project_system_record_id)
+```
+
+``` {r echo = T}
+
+media_labels
+```
