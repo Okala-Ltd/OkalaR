@@ -3,16 +3,46 @@ library(jsonlite)
 library(jsonify)
 library('leaflet')
 
-#okala_URL <- "https://dev.api.dashboard.okala.io/api/"
 
-#' Initiate root URL with API key
+
+#' @title Get API key from environment variable
 #'
-#' Creates a base URL object that can be used as a root to call endpoints.This requires a project API key, which can be obtained directly from the Okala dashboard.
+#' @description
+#' Retrieves the API key from the environment variable OKALA_API_KEY. If the variable is not set, an error is raised.
+#'
+#' @return The API key as a character string
+#' 
+#' @examples
+#' \dontrun{
+#'   api_key <- get_key()
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+get_key <- function() {
+  api_key <- Sys.getenv("OKALA_API_KEY")
+  if (api_key == "") stop("OKALA_API_KEY environment variable not set.")
+  return(api_key)
+}
+
+#' @title Initiate root URL with API key
+#'
+#' @description
+#' Creates a base URL object that can be used as a root to call endpoints. This requires a project API key, which can be obtained directly from the Okala dashboard.
 #'
 #' @param api_key A valid API key
+#' @param okala_url The base URL for the Okala API (default: production)
 #'
-#' @return This function returns a list containing the root URL and the API key
+#' @return A list containing the root URL and the API key
 #'
+#' @examples
+#' \dontrun{
+#'   headers <- auth_headers("your_api_key")
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
 auth_headers <- function(api_key, okala_url="https://api.dashboard.okala.io/api/"){
   root <- httr2::request(okala_url)
@@ -21,6 +51,24 @@ auth_headers <- function(api_key, okala_url="https://api.dashboard.okala.io/api/
   return(d)
 }
 
+#' @title Initiate root URL with API key (Development)
+#'
+#' @description
+#' Creates a base URL object for the development Okala API. Requires a project API key.
+#'
+#' @param api_key A valid API key
+#' @param okala_url The base URL for the Okala dev API (default: dev)
+#'
+#' @return A list containing the root URL and the API key
+#'
+#' @examples
+#' \dontrun{
+#'   headers <- auth_headers_dev("your_api_key")
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
 auth_headers_dev <- function(api_key, okala_url="https://dev.api.dashboard.okala.io/api/"){
   root <- httr2::request(okala_url)
   d = list(key=api_key,
@@ -28,6 +76,26 @@ auth_headers_dev <- function(api_key, okala_url="https://dev.api.dashboard.okala
   return(d)
 }
 
+
+#' @title Get Project Information
+#'
+#' @description
+#' Retrieves information about the active project associated with the provided API key and sets it as the active project.
+#'
+#' @param hdr A list containing the root URL and API key, as returned by \link{auth_headers}.
+#'
+#' @return
+#' No return value. Displays a message indicating the active project name.
+#'
+#' @examples
+#' \dontrun{
+#'   headers <- auth_headers("your_api_key")
+#'   get_project(headers)
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
 get_project <- function(hdr=headers){
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"getProject",hdr$key)
   preq <- httr2::req_perform(urlreq_ap)
@@ -36,16 +104,24 @@ get_project <- function(hdr=headers){
 }
 
 
-#' Get project station metadata
+#' @title Get project station metadata
 #'
+#' @description
 #' Retrieve all of the station data associated with your project, including video, audio, image, and eDNA data types.
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
 #' @param datatype A character vector of data types c("video","audio","image","eDNA")
 #'
-#' @return This function returns an sf object containing station metadata and geometry
-#' @export
+#' @return An sf object containing station metadata and geometry
 #'
+#' @examples
+#' \dontrun{
+#'   stations <- get_station_info(headers, datatype="video")
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
 get_station_info <- function(hdr,
                              datatype=c("video","audio","image","eDNA")){
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"getStations",datatype,hdr$key)
@@ -56,6 +132,22 @@ get_station_info <- function(hdr,
   return(geojson_response)
 }
 
+#' @title Plot stations on a leaflet map
+#'
+#' @description
+#' Plots station locations using leaflet, with circle markers sized by record count.
+#'
+#' @param geojson_response An sf object containing station metadata and geometry
+#'
+#' @return A leaflet map widget
+#'
+#' @examples
+#' \dontrun{
+#'   plot_stations(stations)
+#' }
+#'
+#' @author
+#' Adam Varley
 plot_stations <- function(geojson_response){
     message('Plotting stations')
     leaflet::leaflet(data = geojson_response) %>%
@@ -79,18 +171,25 @@ plot_stations <- function(geojson_response){
 
 
 
-#' Retrieve media assets for a given project system record ID
+#' @title Retrieve media assets for a given project system record ID
 #'
+#' @description
 #' Get all of the station data associated with your project. For data types c("video","audio","image")
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
 #' @param datatype A character vector of data types c("video","audio","image","eDNA")
 #' @param psrID Unique project system ID for which the media assets will be retrieved
 #'
-#' @return This function returns a tibble of media assets for the specified project system record
+#' @return A tibble of media assets for the specified project system record
 #'
+#' @examples
+#' \dontrun{
+#'   assets <- get_media_assets(headers, datatype="video", psrID=123)
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
-#'
 get_media_assets <- function(hdr,
                              datatype=c("video","audio","image","eDNA"),
                              psrID){
@@ -107,16 +206,23 @@ get_media_assets <- function(hdr,
 
 
 
-#' Get project labels for either bioacoustics or camera
+#' @title Get project labels for either bioacoustics or camera
 #'
-#' Labels are derived by using either suggested labels on the platform or by manually
-#' adding labels from the wider database
+#' @description
+#' Labels are derived by using either suggested labels on the platform or by manually adding labels from the wider database.
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
 #' @param labeltype A character vector specifying the label type ('Bioacoustic' or 'Camera')
 #'
-#' @return This function returns a tibble containing project labels
+#' @return A tibble containing project labels
 #'
+#' @examples
+#' \dontrun{
+#'   labels <- get_project_labels(headers, labeltype='Camera')
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
 get_project_labels <- function(hdr,
                                labeltype = c('Bioacoustic','Camera')){
@@ -127,17 +233,24 @@ get_project_labels <- function(hdr,
   return(jsonlite::fromJSON(resp) %>% tibble::as_tibble())
 }
 
-#' Add project labels for either bioacoustics or camera so labeller have access to them in the Dashboard
+#' @title Add project labels for either bioacoustics or camera
 #'
-#' Labels are derived by using either suggested labels on the platform or by manually
-#' adding labels from the wider database
+#' @description
+#' Add labels so labellers have access to them in the Dashboard. Labels are derived by using either suggested labels on the platform or by manually adding labels from the wider database.
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
 #' @param labeltype A character vector specifying the label type ('Bioacoustic' or 'Camera')
-#' @param labels A label object list like specifying the labels to be added
+#' @param labels A label object list specifying the labels to be added
 #'
-#' @return This function returns a tibble containing project labels
+#' @return A success message as a list
 #'
+#' @examples
+#' \dontrun{
+#'   add_project_labels(headers, labeltype='Camera', labels=my_labels)
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
 add_project_labels <- function(hdr,
                                labeltype = c('Bioacoustic','Camera'),labels){
@@ -149,25 +262,31 @@ add_project_labels <- function(hdr,
   return(resp)
 }
 
-
+# Utility function to replace NULLs with NAs in a data frame
 replace_nas <- function(df){
   df[sapply(df,function(x) is.null(x))] = NA
   return(df)
 }
 
-
-#' Get labels from the wider IUCN database (all species)
+#' @title Get labels from the wider IUCN database (all species)
 #'
-#' Labels are derived by using either suggested labels on the platform or by manually
-#' adding labels from the wider database
+#' @description
+#' Retrieve labels from the wider IUCN database, optionally filtered by a search term.
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
 #' @param offset An integer specifying the offset for the query
 #' @param limit An integer specifying the limit for the query
-#' @param search_term A character vector specifying the search term to be used (Can be left our for ful search)
+#' @param search_term A character vector specifying the search term to be used (optional)
 #'
-#' @return a list containing tabular data and pagination information for iterative calls
+#' @return A list containing tabular data and pagination information for iterative calls
 #'
+#' @examples
+#' \dontrun{
+#'   getIUCNLabels(headers, offset=0, limit=100, search_term="horse")
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
 getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
   if (is.null(search_term)){
@@ -187,19 +306,25 @@ getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
 }
 
 
-#' Add labels from the wider IUCN database (all species)
+#' @title Add labels from the wider IUCN database (all species)
 #'
-#' adding labels from the wider database
+#' @description
+#' Add labels from the wider IUCN database in chunks.
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
-#' @param offset An integer specifying the offset for the query
-#' @param limit An integer specifying the limit for the query
-#' @param search_term A character vector specifying the search term to be used (Can be left our for ful search)
+#' @param labels A data frame of labels to add
+#' @param chunksize An integer specifying the chunk size for the submission
 #'
-#' @return a list containing tabular data and pagination information for iterative calls
+#' @return A success message as a list
 #'
+#' @examples
+#' \dontrun{
+#'   add_IUCN_labels(headers, labels=my_labels, chunksize=200)
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
-chunksize=200
 add_IUCN_labels <- function(hdr,labels,chunksize){
 
   if(nrow(labels) < 100){
@@ -236,18 +361,7 @@ add_IUCN_labels <- function(hdr,labels,chunksize){
 }
 
 
-#' sendupdated labels a subfunction used by push_new_labels
-#'
-#' adding labels from the wider database
-#'
-#' @param  A tibble containing the records to be submitted
-#' @param hdr hdr A base URL provided and valid API key returned by the function \link{auth_headers}
-#' @param limit An integer specifying the limit for the query
-#' @param search_term A character vector specifying the search term to be used (Can be left our for ful search)
-#'
-#' @return a list containing tabular data and pagination information for iterative calls
-#'
-
+# Internally used function to send updated labels in chunks
 
 sendupatedlabels <- function(hdr,datachunk) {
 
@@ -263,30 +377,25 @@ sendupatedlabels <- function(hdr,datachunk) {
   return(jsonlite::fromJSON(resp))
 }
 
-#' Push new labels using a chunked process
+#' @title Push new labels using a chunked process
 #'
-#' Labels are derived by using either suggested labels on the platform or by manually
-#' adding labels from the wider database
+#' @description
+#' Push new labels to the platform in chunks.
 #'
 #' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
 #' @param submission_records A tibble containing the records to be submitted
-#'
-#' [
-#'   {
-#'     "segment_record_id_fk": 0,
-#'     "label_id_fk": 0,
-#'     "number_of_individuals": 1,
-#'     "prediction_accuracy": 100,
-#'    "label_record_id": 0
-#'   }
-#' ]
-#'
 #' @param chunksize An integer specifying the chunk size for the submission
-
-#' @return a list containing tabular data and pagination information for iterative calls
 #'
+#' @return A list containing tabular data and pagination information for iterative calls
+#'
+#' @examples
+#' \dontrun{
+#'   push_new_labels(headers, submission_records, chunksize=30)
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
-
 push_new_labels <- function(hdr,submission_records,chunksize){
 
   if(chunksize > nrow(submission_records)){
@@ -304,50 +413,54 @@ push_new_labels <- function(hdr,submission_records,chunksize){
   }
 }
 
-#' Set the blank status for segment labels
+
+
+# Internal function used to chunk media metadata
+send_media_chunks <- function(hdr, datachunk) {
+    datachunk = jsonlite::toJSON(datachunk,pretty=TRUE)
+
+    urlreq_ap <- httr2::req_url_path_append(hdr$root,"updateTimestamps", hdr$key)
+    urlreq_ap <- urlreq_ap |>  httr2::req_method("PUT")  |> httr2::req_body_json(jsonlite::fromJSON(datachunk))
+    #
+    preq <- httr2::req_perform(urlreq_ap,verbosity=3)
+    resp <- httr2::resp_body_string(preq)
+
+    return(jsonlite::fromJSON(resp))
+}
+
+
+#' @title Push new timestamps to the platform in chunks
 #'
-#' This function updates the blank status for a given list of segment record IDs.
+#' @description
+#' Push new timestamps to the platform in chunks.
 #'
-#' @param hdr A base URL and valid API key object returned by the function \link{auth_headers}.
-#' @param segment_record_ids A numeric vector of segment record IDs to update.
-#' @param blank_status A logical value (TRUE or FALSE) to set as the blank status.
-#' @param chunksize An integer specifying the chunk size for the submission.
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
+#' @param media_metadata A tibble containing the media metadata to be submitted
+#' @param chunksize An integer specifying the chunk size for the submission
 #'
-#' @return A list containing the API response message.
+#' @return A success message as a list
 #'
+#' @examples
+#' \dontrun{
+#'   push_new_timestamps(headers, media_metadata, chunksize=100)
+#' }
+#'
+#' @author
+#' Adam Varley
 #' @export
-set_segment_blank_status <- function(hdr, segment_record_ids, blank_status, chunksize = 500) {
+push_new_timestamps <- function(hdr, media_metadata, chunksize) {
+    if(chunksize > nrow(media_metadata)){
+        message('chunksize is bigger than length of data altering chunkszie to ', nrow(media_metadata))
+        chunksize = nrow(media_metadata)
+    }
 
-  # Ensure blank_status is a boolean
-  if (!is.logical(blank_status)) {
-    stop("blank_status must be TRUE or FALSE.")
-  }
+    spl.dt <- split( media_metadata , cut(1:nrow(media_metadata), round(nrow(media_metadata)/chunksize)))
+    i=1
+    for (i in 1:length(spl.dt)){
 
-  # Chunk the segment_record_ids if necessary
-  if (length(segment_record_ids) > chunksize) {
-    spl.ids <- split(segment_record_ids, ceiling(seq_along(segment_record_ids) / chunksize))
-  } else {
-    spl.ids <- list(segment_record_ids)
-  }
-
-  responses <- list()
-  for (i in 1:length(spl.ids)) {
-    id_chunk <- spl.ids[[i]]
-
-    # Construct the request
-    urlreq_ap <- httr2::req_url_path_append(hdr$root, "segmentLabelsBlankStatus", hdr$key, tolower(as.character(blank_status))) %>%
-      httr2::req_method("PUT") %>%
-      httr2::req_body_json(data = id_chunk)
-
-    # Perform the request
-    preq <- httr2::req_perform(urlreq_ap)
-    resp <- httr2::resp_body_json(preq)
-
-    responses[[i]] <- resp
-    message('Submitted chunk ', i, ' of ', length(spl.ids), ' with ', length(id_chunk), ' IDs.')
-  }
-
-  return(responses)
+        send_media_chunks(hdr,spl.dt[[i]])
+        message('submitted ',i*chunksize,' timestamps of ', nrow(media_metadata))
+    }
 }
 
 

@@ -13,12 +13,20 @@ getIUCNLabels(hdr, offset, limit, search_term = NULL)
 
 \item{limit}{An integer specifying the limit for the query}
 
-\item{search_term}{A character vector specifying the search term to be used (Can be left our for ful search)}
+\item{search_term}{A character vector specifying the search term to be used (optional)}
 }
 \value{
-a list containing tabular data and pagination information for iterative calls
+A list containing tabular data and pagination information for iterative calls
 }
 \description{
-Labels are derived by using either suggested labels on the platform or by manually
-adding labels from the wider database
+Retrieve labels from the wider IUCN database, optionally filtered by a search term.
+}
+\examples{
+\dontrun{
+  getIUCNLabels(headers, offset=0, limit=100, search_term="horse")
+}
+
+}
+\author{
+Adam Varley
 }

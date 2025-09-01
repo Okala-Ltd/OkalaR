@@ -14,8 +14,17 @@ get_media_assets(hdr, datatype = c("video", "audio", "image", "eDNA"), psrID)
 \item{psrID}{Unique project system ID for which the media assets will be retrieved}
 }
 \value{
-This function returns a tibble of media assets for the specified project system record
+A tibble of media assets for the specified project system record
 }
 \description{
 Get all of the station data associated with your project. For data types c("video","audio","image")
+}
+\examples{
+\dontrun{
+  assets <- get_media_assets(headers, datatype="video", psrID=123)
+}
+
+}
+\author{
+Adam Varley
 }
