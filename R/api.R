@@ -138,7 +138,7 @@ get_project_labels <- function(hdr,
 #'
 #' @return This function returns a tibble containing project labels
 #'
-#' @export A success message as a list
+#' @export
 add_project_labels <- function(hdr,
                                labeltype = c('Bioacoustic','Camera'),labels){
   urlreq_ap <- httr2::req_url_path_append(hdr$root,"addProjectLabels",labeltype,hdr$key)
@@ -168,7 +168,7 @@ replace_nas <- function(df){
 #'
 #' @return a list containing tabular data and pagination information for iterative calls
 #'
-#' @export A success message as a list
+#' @export
 getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
   if (is.null(search_term)){
     search_term = ""
@@ -198,7 +198,7 @@ getIUCNLabels <- function(hdr, offset, limit,search_term=NULL){
 #'
 #' @return a list containing tabular data and pagination information for iterative calls
 #'
-#' @export A success message as a list
+#' @export
 chunksize=200
 add_IUCN_labels <- function(hdr,labels,chunksize){
 
@@ -247,7 +247,7 @@ add_IUCN_labels <- function(hdr,labels,chunksize){
 #'
 #' @return a list containing tabular data and pagination information for iterative calls
 #'
-#' @export A success message as a list
+
 
 sendupatedlabels <- function(hdr,datachunk) {
 
@@ -285,7 +285,7 @@ sendupatedlabels <- function(hdr,datachunk) {
 
 #' @return a list containing tabular data and pagination information for iterative calls
 #'
-#' @export A success message as a list
+#' @export
 
 push_new_labels <- function(hdr,submission_records,chunksize){
 
