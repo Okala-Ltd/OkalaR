@@ -304,6 +304,51 @@ push_new_labels <- function(hdr,submission_records,chunksize){
   }
 }
 
+#' Set the blank status for segment labels
+#'
+#' This function updates the blank status for a given list of segment record IDs.
+#'
+#' @param hdr A base URL and valid API key object returned by the function \link{auth_headers}.
+#' @param segment_record_ids A numeric vector of segment record IDs to update.
+#' @param blank_status A logical value (TRUE or FALSE) to set as the blank status.
+#' @param chunksize An integer specifying the chunk size for the submission.
+#'
+#' @return A list containing the API response message.
+#'
+#' @export
+set_segment_blank_status <- function(hdr, segment_record_ids, blank_status, chunksize = 500) {
+
+  # Ensure blank_status is a boolean
+  if (!is.logical(blank_status)) {
+    stop("blank_status must be TRUE or FALSE.")
+  }
+
+  # Chunk the segment_record_ids if necessary
+  if (length(segment_record_ids) > chunksize) {
+    spl.ids <- split(segment_record_ids, ceiling(seq_along(segment_record_ids) / chunksize))
+  } else {
+    spl.ids <- list(segment_record_ids)
+  }
+
+  responses <- list()
+  for (i in 1:length(spl.ids)) {
+    id_chunk <- spl.ids[[i]]
+
+    # Construct the request
+    urlreq_ap <- httr2::req_url_path_append(hdr$root, "segmentLabelsBlankStatus", hdr$key, tolower(as.character(blank_status))) %>%
+      httr2::req_method("PUT") %>%
+      httr2::req_body_json(data = id_chunk)
+
+    # Perform the request
+    preq <- httr2::req_perform(urlreq_ap)
+    resp <- httr2::resp_body_json(preq)
+
+    responses[[i]] <- resp
+    message('Submitted chunk ', i, ' of ', length(spl.ids), ' with ', length(id_chunk), ' IDs.')
+  }
+
+  return(responses)
+}
 
 
 
