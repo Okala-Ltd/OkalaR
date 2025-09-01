@@ -2,27 +2,32 @@
 % Please edit documentation in R/api.R
 \name{set_segment_blank_status}
 \alias{set_segment_blank_status}
-\title{Set the blank status for segment labels}
+\title{Set blank status for segment labels}
 \usage{
-set_segment_blank_status(
-  hdr,
-  segment_record_ids,
-  blank_status,
-  chunksize = 500
-)
+set_segment_blank_status(hdr, blank_status, segment_record_ids)
 }
 \arguments{
-\item{hdr}{A base URL and valid API key object returned by the function \link{auth_headers}.}
+\item{hdr}{A base URL provided and valid API key returned by the function \link{auth_headers}.}
+
+\item{blank_status}{A boolean value indicating whether to mark as blank (TRUE) or unblank (FALSE).}
 
 \item{segment_record_ids}{A numeric vector of segment record IDs to update.}
-
-\item{blank_status}{A logical value (TRUE or FALSE) to set as the blank status.}
-
-\item{chunksize}{An integer specifying the chunk size for the submission.}
 }
 \value{
 A list containing the API response message.
 }
 \description{
-This function updates the blank status for a given list of segment record IDs.
+Marks or unmarks segment labels as blank for a given list of segment record IDs.
+}
+\examples{
+\dontrun{
+  # Mark segments as blank
+  set_segment_blank_status(headers, blank_status = TRUE, segment_record_ids = c(101, 102, 103))
+  # Unmark segments as blank
+  set_segment_blank_status(headers, blank_status = FALSE, segment_record_ids = c(101, 102, 103))
+}
+
+}
+\author{
+Adam Varley
 }
