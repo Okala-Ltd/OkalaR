@@ -463,6 +463,42 @@ push_new_timestamps <- function(hdr, media_metadata, chunksize) {
     }
 }
 
+#' @title Set blank status for segment labels
+#'
+#' @description
+#' Marks or unmarks segment labels as blank for a given list of segment record IDs.
+#'
+#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}.
+#' @param blank_status A boolean value indicating whether to mark as blank (TRUE) or unblank (FALSE).
+#' @param segment_record_ids A numeric vector of segment record IDs to update.
+#'
+#' @return A list containing the API response message.
+#'
+#' @examples
+#' \dontrun{
+#'   # Mark segments as blank
+#'   set_segment_blank_status(headers, blank_status = TRUE, segment_record_ids = c(101, 102, 103))
+#'   # Unmark segments as blank
+#'   set_segment_blank_status(headers, blank_status = FALSE, segment_record_ids = c(101, 102, 103))
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+set_segment_blank_status <- function(hdr, blank_status, segment_record_ids) {
+  status_str <- tolower(as.character(blank_status))
+
+  urlreq_ap <- httr2::req_url_path_append(hdr$root, "segmentLabelsBlankStatus", hdr$key, status_str) %>%
+    httr2::req_method("PUT") %>%
+    httr2::req_body_json(data = segment_record_ids)
+
+  preq <- httr2::req_perform(urlreq_ap)
+  resp <- httr2::resp_body_json(preq)
+
+  message(resp$message)
+  return(resp)
+}
+
 
 
 
