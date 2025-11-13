@@ -7,17 +7,21 @@
 get_media_assets(hdr, datatype = c("video", "audio", "image", "eDNA"), psrID)
 }
 \arguments{
-\item{hdr}{A base URL provided and valid API key returned by the function \link{auth_headers}}
+\item{hdr}{A base URL provided and valid API key returned by the
+function \link{auth_headers}}
 
-\item{datatype}{A character vector of data types c("video","audio","image","eDNA")}
+\item{datatype}{A character vector of data types
+c("video","audio","image","eDNA")}
 
-\item{psrID}{Unique project system ID for which the media assets will be retrieved}
+\item{psrID}{Unique project system ID for which the media assets
+will be retrieved}
 }
 \value{
 A tibble of media assets for the specified project system record
 }
 \description{
-Get all of the station data associated with your project. For data types c("video","audio","image")
+Get all of the station data associated with your project.
+For data types c("video","audio","image")
 }
 \examples{
 \dontrun{

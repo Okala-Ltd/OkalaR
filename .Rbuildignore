@@ -2,3 +2,6 @@
 ^\.Rproj\.user$
 ^\.Rhistory$
 ^\.RData$
+^\.lintr$
+^\.github$
+^tutorials$
