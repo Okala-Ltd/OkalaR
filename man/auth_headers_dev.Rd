@@ -18,7 +18,8 @@ auth_headers_dev(
 A list containing the root URL and the API key
 }
 \description{
-Creates a base URL object for the development Okala API. Requires a project API key.
+Creates a base URL object for the development Okala API.
+Requires a project API key.
 }
 \examples{
 \dontrun{
