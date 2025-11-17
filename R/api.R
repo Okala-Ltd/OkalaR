@@ -696,7 +696,448 @@ upload_edna_records <- function(hdr, validated_data,
   return(result)
 }
 
+#' @title Push Phone Observations
+#'
+#' @description
+#' Uploads field observations from mobile devices to the Okala platform.
+#' Supports uploading features with observations and optional media files
+#' (photos, videos, audio).
+#'
+#' @param hdr A list containing the root URL and API key for authentication
+#'   (from auth_headers()).
+#' @param project_id The project ID to which observations will be uploaded.
+#' @param feature_payload A list of feature records. Each feature should have:
+#'   \itemize{
+#'     \item feature_uuid: UUID for the feature (character)
+#'     \item project_system_id: Project system ID (integer)
+#'     \item procedure_id: Procedure ID (integer)
+#'     \item procedure_start_timestamp: Start timestamp (POSIXct or character)
+#'     \item procedure_end_timestamp: End timestamp (POSIXct or character)
+#'     \item created_by_method: Method used (e.g., "drawn", "gps")
+#'     \item geometry: GeoJSON geometry object (list with type and coordinates)
+#'     \item observations: List of observation features (see details)
+#'   }
+#' @param device_settings A list containing device metadata:
+#'   \itemize{
+#'     \item battery_level: Battery percentage (0-100)
+#'     \item carrier: Mobile carrier name
+#'     \item build_number: App build number
+#'     \item build_id: App build ID
+#'     \item device_id: Unique device identifier
+#'     \item phone_model: Device model
+#'     \item phone_operating_system: OS version
+#'     \item device_created_at: Device creation timestamp
+#'     \item device_last_used: Last usage timestamp
+#'   }
+#' @param media_files Optional list of file paths to upload. Files are matched
+#'   by filename in observation data arrays.
+#'
+#' @return A tibble with upload response messages
+#'
+#' @details
+#' Each observation in feature_payload should be a GeoJSON Feature with:
+#' \itemize{
+#'   \item type: "Feature"
+#'   \item geometry: Point geometry with coordinates
+#'   \item properties: List with item_uuid, item_type, observation_uuid,
+#'     observation_created_at, and data (array of values/filenames)
+#' }
+#'
+#' For media observations (phone-photo, phone-video, phone-audio), the data
+#' array should contain filenames that match the media_files parameter.
+#'
+#' @examples
+#' \dontrun{
+#'   headers <- auth_headers()
+#'   
+#'   # Define feature with observations
+#'   feature <- list(
+#'     feature_uuid = uuid::UUIDgenerate(),
+#'     project_system_id = 123,
+#'     procedure_id = 456,
+#'     procedure_start_timestamp = Sys.time(),
+#'     procedure_end_timestamp = Sys.time(),
+#'     created_by_method = "drawn",
+#'     geometry = list(
+#'       type = "Polygon",
+#'       coordinates = list(list(
+#'         c(-0.1, 51.5),
+#'         c(-0.1, 51.6),
+#'         c(0.0, 51.6),
+#'         c(0.0, 51.5),
+#'         c(-0.1, 51.5)
+#'       ))
+#'     ),
+#'     observations = list(
+#'       list(
+#'         type = "Feature",
+#'         geometry = list(type = "Point", coordinates = c(-0.05, 51.55)),
+#'         properties = list(
+#'           item_uuid = uuid::UUIDgenerate(),
+#'           item_type = "text",
+#'           observation_uuid = uuid::UUIDgenerate(),
+#'           observation_created_at = Sys.time(),
+#'           data = list("Sample observation")
+#'         )
+#'       )
+#'     )
+#'   )
+#'   
+#'   device <- list(
+#'     battery_level = 85,
+#'     carrier = "Vodafone",
+#'     build_number = "1.0.0",
+#'     build_id = "build-123",
+#'     device_id = "device-xyz",
+#'     phone_model = "iPhone 14",
+#'     phone_operating_system = "iOS 17",
+#'     device_created_at = Sys.time(),
+#'     device_last_used = Sys.time()
+#'   )
+#'   
+#'   result <- push_phone_observations(
+#'     headers,
+#'     project_id = 1,
+#'     feature_payload = list(feature),
+#'     device_settings = device
+#'   )
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+push_phone_observations <- function(hdr, project_id, feature_payload,
+                                    device_settings, media_files = NULL) {
+  
+  # Build the request body
+  request_body <- list(
+    feature_payload = feature_payload,
+    device_settings = device_settings
+  )
+  
+  # Convert to JSON
+  json_body <- jsonlite::toJSON(request_body, auto_unbox = TRUE)
+  
+  # Build the request
+  urlreq_ap <- httr2::req_url_path_append(
+    hdr$root,
+    "pushPhoneObservations",
+    hdr$key,
+    as.character(project_id)
+  ) %>%
+    httr2::req_method("POST")
+  
+  # If media files are provided, use multipart form
+  if (!is.null(media_files)) {
+    message("Uploading ", length(media_files), " media file(s)")
+    
+    # Build multipart form parts
+    form_parts <- list(
+      device_upload = httr2::curl_form_data(
+        json_body,
+        type = "application/json"
+      )
+    )
+    
+    # Add each file as a separate part
+    for (file_path in media_files) {
+      if (!file.exists(file_path)) {
+        stop("File not found: ", file_path)
+      }
+      
+      file_name <- basename(file_path)
+      # Determine MIME type based on extension
+      ext <- tolower(tools::file_ext(file_path))
+      mime_type <- switch(ext,
+        jpg = "image/jpeg",
+        jpeg = "image/jpeg",
+        png = "image/png",
+        mp4 = "video/mp4",
+        mov = "video/quicktime",
+        mp3 = "audio/mpeg",
+        m4a = "audio/mp4",
+        wav = "audio/wav",
+        "application/octet-stream"
+      )
+      
+      form_parts[[file_name]] <- httr2::curl_form_file(
+        file_path,
+        type = mime_type
+      )
+    }
+    
+    urlreq_ap <- urlreq_ap %>%
+      httr2::req_body_multipart(!!!form_parts)
+  } else {
+    # No media files, just send JSON
+    urlreq_ap <- urlreq_ap %>%
+      httr2::req_body_json(data = request_body)
+  }
+  
+  # Perform request
+  preq <- httr2::req_perform(urlreq_ap)
+  resp <- httr2::resp_body_json(preq, simplifyVector = TRUE)
+  
+  # Convert response to tibble
+  if ("messages" %in% names(resp)) {
+    result <- tibble::as_tibble(resp$messages)
+    
+    # Count successes and errors
+    n_success <- sum(result$response_type == "success")
+    n_error <- sum(result$response_type == "error")
+    n_warning <- sum(result$response_type == "warning")
+    
+    message("Upload complete: ", n_success, " success, ",
+            n_error, " errors, ", n_warning, " warnings")
+  } else {
+    result <- tibble::as_tibble(resp)
+    message("Upload complete")
+  }
+  
+  return(result)
+}
 
+#' @title Build Observation Payload from Dataframe
+#'
+#' @description
+#' Helper function to convert flat dataframes into the nested structure
+#' required by push_phone_observations. Makes it easier to work with
+#' observations in R's tabular format.
+#'
+#' @param observations_df A dataframe with one row per observation containing:
+#'   \itemize{
+#'     \item feature_uuid: UUID grouping observations into features
+#'     \item observation_uuid: Unique ID for this observation
+#'     \item observation_created_at: Timestamp when observation was recorded
+#'     \item item_uuid: ID of the item/question being answered
+#'     \item item_type: Type of observation (text, numeric, choice, label,
+#'       phone-photo, phone-video, phone-audio)
+#'     \item observation_value: The value(s) - for media, use filename
+#'     \item longitude: Observation point longitude
+#'     \item latitude: Observation point latitude
+#'   }
+#' @param features_df A dataframe with one row per feature containing:
+#'   \itemize{
+#'     \item feature_uuid: UUID for the feature
+#'     \item project_system_id: Project system ID
+#'     \item procedure_id: Procedure ID
+#'     \item procedure_start_timestamp: Start time
+#'     \item procedure_end_timestamp: End time
+#'     \item created_by_method: Method (e.g., "drawn", "gps")
+#'     \item geometry_type: "Point", "Polygon", etc.
+#'     \item geometry_coords: JSON string or list of coordinates
+#'   }
+#'
+#' @return A list structure ready for push_phone_observations
+#'
+#' @examples
+#' \dontrun{
+#'   # Create observations dataframe
+#'   obs_df <- data.frame(
+#'     feature_uuid = rep("feature-1", 2),
+#'     observation_uuid = c("obs-1", "obs-2"),
+#'     observation_created_at = Sys.time(),
+#'     item_uuid = c("item-1", "item-2"),
+#'     item_type = c("text", "numeric"),
+#'     observation_value = c("Tree", "15"),
+#'     longitude = c(-0.05, -0.05),
+#'     latitude = c(51.55, 51.55)
+#'   )
+#'   
+#'   # Create features dataframe
+#'   feat_df <- data.frame(
+#'     feature_uuid = "feature-1",
+#'     project_system_id = 123,
+#'     procedure_id = 456,
+#'     procedure_start_timestamp = Sys.time(),
+#'     procedure_end_timestamp = Sys.time(),
+#'     created_by_method = "drawn",
+#'     geometry_type = "Polygon",
+#'     geometry_coords = '[[[−0.1,51.5],[−0.1,51.6],[0,51.6],[0,51.5],[−0.1,51.5]]]'
+#'   )
+#'   
+#'   payload <- build_observation_payload(obs_df, feat_df)
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+build_observation_payload <- function(observations_df, features_df) {
+  
+  # Validate required columns
+  obs_required <- c("feature_uuid", "observation_uuid", "observation_created_at",
+                    "item_uuid", "item_type", "observation_value",
+                    "longitude", "latitude")
+  feat_required <- c("feature_uuid", "project_system_id", "procedure_id",
+                     "procedure_start_timestamp", "procedure_end_timestamp",
+                     "created_by_method", "geometry_type", "geometry_coords")
+  
+  missing_obs <- setdiff(obs_required, names(observations_df))
+  missing_feat <- setdiff(feat_required, names(features_df))
+  
+  if (length(missing_obs) > 0) {
+    stop("Missing required observation columns: ",
+         paste(missing_obs, collapse = ", "))
+  }
+  
+  if (length(missing_feat) > 0) {
+    stop("Missing required feature columns: ",
+         paste(missing_feat, collapse = ", "))
+  }
+  
+  # Split observations by feature
+  obs_by_feature <- split(observations_df,
+                          observations_df$feature_uuid)
+  
+  # Build feature list
+  feature_list <- lapply(seq_len(nrow(features_df)), function(i) {
+    feat <- features_df[i, ]
+    
+    # Parse geometry coordinates
+    if (is.character(feat$geometry_coords)) {
+      geom_coords <- jsonlite::fromJSON(feat$geometry_coords)
+    } else {
+      geom_coords <- feat$geometry_coords
+    }
+    
+    # Get observations for this feature
+    feature_obs <- obs_by_feature[[as.character(feat$feature_uuid)]]
+    
+    # Build observation list
+    observations_list <- list()
+    if (!is.null(feature_obs) && nrow(feature_obs) > 0) {
+      observations_list <- lapply(seq_len(nrow(feature_obs)), function(j) {
+        obs <- feature_obs[j, ]
+        
+        # Parse observation value - could be single value or array
+        obs_data <- if (grepl(",", obs$observation_value)) {
+          strsplit(as.character(obs$observation_value), ",")[[1]]
+        } else {
+          list(obs$observation_value)
+        }
+        
+        # Convert numeric values
+        if (obs$item_type == "numeric") {
+          obs_data <- lapply(obs_data, as.numeric)
+        } else if (obs$item_type == "label") {
+          obs_data <- lapply(obs_data, as.integer)
+        }
+        
+        list(
+          type = "Feature",
+          geometry = list(
+            type = "Point",
+            coordinates = c(obs$longitude, obs$latitude)
+          ),
+          properties = list(
+            item_uuid = obs$item_uuid,
+            item_type = obs$item_type,
+            observation_uuid = obs$observation_uuid,
+            observation_created_at = format(obs$observation_created_at,
+                                           "%Y-%m-%dT%H:%M:%S"),
+            data = obs_data
+          )
+        )
+      })
+    }
+    
+    list(
+      feature_uuid = feat$feature_uuid,
+      project_system_id = as.integer(feat$project_system_id),
+      procedure_id = as.integer(feat$procedure_id),
+      procedure_start_timestamp = format(feat$procedure_start_timestamp,
+                                        "%Y-%m-%dT%H:%M:%SZ"),
+      procedure_end_timestamp = format(feat$procedure_end_timestamp,
+                                      "%Y-%m-%dT%H:%M:%SZ"),
+      created_by_method = feat$created_by_method,
+      geometry = list(
+        type = feat$geometry_type,
+        coordinates = geom_coords
+      ),
+      observations = observations_list
+    )
+  })
+  
+  return(feature_list)
+}
+
+#' @title Build Device Settings from Dataframe
+#'
+#' @description
+#' Helper function to convert a single-row dataframe or named list into
+#' the device_settings structure required by push_phone_observations.
+#'
+#' @param device_df A dataframe or list with device information:
+#'   \itemize{
+#'     \item battery_level: Battery percentage (0-100)
+#'     \item carrier: Mobile carrier name
+#'     \item build_number: App build number
+#'     \item build_id: App build ID
+#'     \item device_id: Unique device identifier
+#'     \item phone_model: Device model
+#'     \item phone_operating_system: OS version
+#'     \item device_created_at: Device creation timestamp (optional)
+#'     \item device_last_used: Last usage timestamp (optional)
+#'   }
+#'
+#' @return A list structure ready for push_phone_observations
+#'
+#' @examples
+#' \dontrun{
+#'   device_df <- data.frame(
+#'     battery_level = 85,
+#'     carrier = "Vodafone",
+#'     build_number = "1.0.0",
+#'     build_id = "build-123",
+#'     device_id = "device-xyz",
+#'     phone_model = "iPhone 14",
+#'     phone_operating_system = "iOS 17"
+#'   )
+#'   
+#'   device_settings <- build_device_settings(device_df)
+#' }
+#'
+#' @author
+#' Adam Varley
+#' @export
+build_device_settings <- function(device_df) {
+  
+  required <- c("battery_level", "carrier", "build_number", "build_id",
+                "device_id", "phone_model", "phone_operating_system")
+  
+  # Convert to list if dataframe
+  if (is.data.frame(device_df)) {
+    device_df <- as.list(device_df[1, ])
+  }
+  
+  missing <- setdiff(required, names(device_df))
+  if (length(missing) > 0) {
+    stop("Missing required device fields: ", paste(missing, collapse = ", "))
+  }
+  
+  # Build device settings with defaults
+  settings <- list(
+    battery_level = as.integer(device_df$battery_level),
+    carrier = as.character(device_df$carrier),
+    build_number = as.character(device_df$build_number),
+    build_id = as.character(device_df$build_id),
+    device_id = as.character(device_df$device_id),
+    phone_model = as.character(device_df$phone_model),
+    phone_operating_system = as.character(device_df$phone_operating_system),
+    device_created_at = if (!is.null(device_df$device_created_at)) {
+      format(device_df$device_created_at, "%Y-%m-%dT%H:%M:%S")
+    } else {
+      format(Sys.time(), "%Y-%m-%dT%H:%M:%S")
+    },
+    device_last_used = if (!is.null(device_df$device_last_used)) {
+      format(device_df$device_last_used, "%Y-%m-%dT%H:%M:%SZ")
+    } else {
+      format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ")
+    }
+  )
+  
+  return(settings)
+}
 
 
 
