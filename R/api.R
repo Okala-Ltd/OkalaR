@@ -459,21 +459,155 @@ send_media_chunks <- function(hdr, datachunk) {
 }
 
 
-#' @title Push new timestamps to the platform in chunks
+#' @title Update timestamps for multiple media records
 #'
 #' @description
-#' Push new timestamps to the platform in chunks.
+#' Updates timestamps for one or more media file records in a single API call.
+#' This function provides direct access to the updateTimestamps endpoint without
+#' automatic chunking. For large datasets (>1000 records), consider using
+#' \link{push_new_timestamps} which handles chunking automatically.
 #'
-#' @param hdr A base URL provided and valid API key returned by the function \link{auth_headers}
-#' @param media_metadata A tibble containing the media metadata to be submitted
-#' @param chunksize An integer specifying the chunk size for the submission
+#' @param hdr A base URL provided and valid API key returned by the
+#'   function \link{auth_headers}
+#' @param media_records A data frame or tibble containing the media records to update.
+#'   Must contain the following columns:
+#'   \itemize{
+#'     \item \strong{media_file_record_id} (required): Numeric. The unique identifier
+#'           of the media file record to update.
+#'     \item \strong{new_timestamp} (required): Character. The new timestamp in
+#'           ISO 8601 format (e.g., "2024-01-15T10:30:00" or "2024-01-15 10:30:00").
+#'   }
+#'   Additional columns will be ignored.
 #'
-#' @return A success message as a list
+#' @return A list containing the API response with update status
 #'
 #' @examples
 #' \dontrun{
-#'   push_new_timestamps(headers, media_metadata, chunksize=100)
+#'   # Create a data frame with media records to update
+#'   updates <- data.frame(
+#'     media_file_record_id = c(123, 456, 789),
+#'     new_timestamp = c(
+#'       "2024-01-15T10:30:00",
+#'       "2024-01-15T14:20:00",
+#'       "2024-01-15T18:45:00"
+#'     )
+#'   )
+#'   
+#'   # Update the timestamps
+#'   result <- update_media_timestamps(headers, updates)
+#'   
+#'   # Using tibble format
+#'   library(tibble)
+#'   updates <- tibble(
+#'     media_file_record_id = c(123, 456),
+#'     new_timestamp = c("2024-01-15T10:30:00", "2024-01-15T14:20:00")
+#'   )
+#'   result <- update_media_timestamps(headers, updates)
 #' }
+#'
+#' @seealso
+#' \link{push_new_timestamps} for automatic chunking of large datasets
+#'
+#' @author
+#' Adam Varley
+#' @export
+update_media_timestamps <- function(hdr, media_records) {
+  # Validate required columns
+  required_cols <- c("media_file_record_id", "new_timestamp")
+  missing_cols <- setdiff(required_cols, names(media_records))
+  
+  if (length(missing_cols) > 0) {
+    stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
+  }
+  
+  # Validate data types
+  if (!is.numeric(media_records$media_file_record_id)) {
+    stop("media_file_record_id must be numeric")
+  }
+  
+  if (!is.character(media_records$new_timestamp)) {
+    stop("new_timestamp must be character string in ISO 8601 format")
+  }
+  
+  # Select only required columns
+  media_records <- media_records[, required_cols, drop = FALSE]
+  
+  # Convert to JSON
+  media_json <- jsonlite::toJSON(media_records, pretty = TRUE)
+  
+  # Make API request
+  urlreq_ap <- httr2::req_url_path_append(hdr$root, "updateTimestamps", hdr$key) %>%
+    httr2::req_method("PUT") %>%
+    httr2::req_body_json(jsonlite::fromJSON(media_json))
+  
+  preq <- httr2::req_perform(urlreq_ap)
+  resp <- httr2::resp_body_string(preq)
+  
+  result <- jsonlite::fromJSON(resp)
+  
+  message("Successfully updated ", nrow(media_records), " media timestamp(s)")
+  
+  return(result)
+}
+
+
+#' @title Push new timestamps to the platform in chunks
+#'
+#' @description
+#' Updates timestamps for multiple media file records by automatically splitting
+#' the data into manageable chunks. This function is recommended for large
+#' datasets (>1000 records) as it prevents timeout issues and provides progress
+#' tracking. For smaller datasets, consider using \link{update_media_timestamps}
+#' for direct submission without chunking.
+#'
+#' @param hdr A base URL provided and valid API key returned by the
+#'   function \link{auth_headers}
+#' @param media_metadata A data frame or tibble containing the media records to update.
+#'   Must contain the following columns:
+#'   \itemize{
+#'     \item \strong{media_file_record_id} (required): Numeric. The unique identifier
+#'           of the media file record to update.
+#'     \item \strong{new_timestamp} (required): Character. The new timestamp in
+#'           ISO 8601 format (e.g., "2024-01-15T10:30:00" or "2024-01-15 10:30:00").
+#'   }
+#'   Additional columns will be ignored during submission.
+#' @param chunksize An integer specifying the number of records to submit per
+#'   chunk. Recommended values: 50-200 depending on network conditions. If
+#'   chunksize exceeds the number of rows, it will be automatically adjusted.
+#'
+#' @return No explicit return value. Progress messages are displayed for each
+#'   chunk submitted.
+#'
+#' @examples
+#' \dontrun{
+#'   # Create a large dataset with timestamp updates
+#'   updates <- data.frame(
+#'     media_file_record_id = 1:1000,
+#'     new_timestamp = seq(
+#'       as.POSIXct("2024-01-15 08:00:00"),
+#'       by = "30 sec",
+#'       length.out = 1000
+#'     ) %>% format("%Y-%m-%dT%H:%M:%S")
+#'   )
+#'   
+#'   # Push updates in chunks of 100
+#'   push_new_timestamps(headers, updates, chunksize = 100)
+#'   
+#'   # Using tibble format
+#'   library(tibble)
+#'   updates <- tibble(
+#'     media_file_record_id = c(123, 456, 789),
+#'     new_timestamp = c(
+#'       "2024-01-15T10:30:00",
+#'       "2024-01-15T14:20:00",
+#'       "2024-01-15T18:45:00"
+#'     )
+#'   )
+#'   push_new_timestamps(headers, updates, chunksize = 50)
+#' }
+#'
+#' @seealso
+#' \link{update_media_timestamps} for direct submission without chunking
 #'
 #' @author
 #' Adam Varley
