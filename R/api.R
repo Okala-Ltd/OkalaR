@@ -529,6 +529,19 @@ update_media_timestamps <- function(hdr, media_records) {
     stop("new_timestamp must be character string in ISO 8601 format")
   }
   
+  # Basic ISO 8601 format validation for new_timestamp
+  # Accepts patterns like: 2024-01-31T23:59:59Z or 2024-01-31T23:59:59+01:00
+  iso8601_pattern <- "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:?\\d{2})?$"
+  invalid_idx <- which(!is.na(media_records$new_timestamp) &
+                         !grepl(iso8601_pattern, media_records$new_timestamp))
+  if (length(invalid_idx) > 0) {
+    stop(
+      "new_timestamp must be in ISO 8601 format, e.g. '2024-01-31T23:59:59Z'. ",
+      "Invalid values at row(s): ",
+      paste(invalid_idx, collapse = ", ")
+    )
+  }
+  
   # Select only required columns
   media_records <- media_records[, required_cols, drop = FALSE]
   
