@@ -524,6 +524,15 @@ update_media_timestamps <- function(hdr, media_records) {
   if (!is.numeric(media_records$media_file_record_id)) {
     stop("media_file_record_id must be numeric")
   }
+  if (any(is.na(media_records$media_file_record_id))) {
+    stop("media_file_record_id cannot contain NA values")
+  }
+  if (any(media_records$media_file_record_id <= 0)) {
+    stop("media_file_record_id must be positive")
+  }
+  if (any(media_records$media_file_record_id %% 1 != 0)) {
+    stop("media_file_record_id must be an integer")
+  }
   
   if (!is.character(media_records$new_timestamp)) {
     stop("new_timestamp must be character string in ISO 8601 format")
