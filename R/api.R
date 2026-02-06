@@ -562,7 +562,16 @@ update_media_timestamps <- function(hdr, media_records) {
     httr2::req_method("PUT") %>%
     httr2::req_body_json(jsonlite::fromJSON(media_json))
   
-  preq <- httr2::req_perform(urlreq_ap)
+  preq <- tryCatch(
+    httr2::req_perform(urlreq_ap),
+    error = function(e) {
+      stop(
+        "Failed to perform request to update media timestamps: ",
+        conditionMessage(e),
+        call. = FALSE
+      )
+    }
+  )
   resp <- httr2::resp_body_string(preq)
   
   result <- jsonlite::fromJSON(resp)
