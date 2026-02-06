@@ -524,23 +524,51 @@ update_media_timestamps <- function(hdr, media_records) {
   if (!is.numeric(media_records$media_file_record_id)) {
     stop("media_file_record_id must be numeric")
   }
+  if (any(is.na(media_records$media_file_record_id))) {
+    stop("media_file_record_id cannot contain NA values")
+  }
+  if (any(media_records$media_file_record_id <= 0)) {
+    stop("media_file_record_id must be positive")
+  }
+  if (any(media_records$media_file_record_id %% 1 != 0)) {
+    stop("media_file_record_id must be an integer")
+  }
   
   if (!is.character(media_records$new_timestamp)) {
     stop("new_timestamp must be character string in ISO 8601 format")
   }
   
+  # Basic ISO 8601 format validation for new_timestamp
+  # Accepts patterns like: 2024-01-31T23:59:59Z or 2024-01-31T23:59:59+01:00
+  iso8601_pattern <- "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:?\\d{2})?$"
+  invalid_idx <- which(!is.na(media_records$new_timestamp) &
+                         !grepl(iso8601_pattern, media_records$new_timestamp))
+  if (length(invalid_idx) > 0) {
+    stop(
+      "new_timestamp must be in ISO 8601 format, e.g. '2024-01-31T23:59:59Z'. ",
+      "Invalid values at row(s): ",
+      paste(invalid_idx, collapse = ", ")
+    )
+  }
+  
   # Select only required columns
   media_records <- media_records[, required_cols, drop = FALSE]
-  
-  # Convert to JSON
-  media_json <- jsonlite::toJSON(media_records, pretty = TRUE)
   
   # Make API request
   urlreq_ap <- httr2::req_url_path_append(hdr$root, "updateTimestamps", hdr$key) %>%
     httr2::req_method("PUT") %>%
-    httr2::req_body_json(jsonlite::fromJSON(media_json))
+    httr2::req_body_json(media_records)
   
-  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
+  preq <- tryCatch(
+    httr2::req_perform(urlreq_ap,verbosity=3),
+    error = function(e) {
+      stop(
+        "Failed to perform request to update media timestamps: ",
+        conditionMessage(e),
+        call. = FALSE
+      )
+    }
+  )
   resp <- httr2::resp_body_string(preq)
   
   result <- jsonlite::fromJSON(resp)
