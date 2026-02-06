@@ -554,13 +554,10 @@ update_media_timestamps <- function(hdr, media_records) {
   # Select only required columns
   media_records <- media_records[, required_cols, drop = FALSE]
   
-  # Convert to JSON
-  media_json <- jsonlite::toJSON(media_records, pretty = TRUE)
-  
   # Make API request
   urlreq_ap <- httr2::req_url_path_append(hdr$root, "updateTimestamps", hdr$key) %>%
     httr2::req_method("PUT") %>%
-    httr2::req_body_json(jsonlite::fromJSON(media_json))
+    httr2::req_body_json(media_records)
   
   preq <- tryCatch(
     httr2::req_perform(urlreq_ap),
