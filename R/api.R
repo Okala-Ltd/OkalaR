@@ -540,7 +540,7 @@ update_media_timestamps <- function(hdr, media_records) {
     httr2::req_method("PUT") %>%
     httr2::req_body_json(jsonlite::fromJSON(media_json))
   
-  preq <- httr2::req_perform(urlreq_ap, verbosity=3)
+  preq <- httr2::req_perform(urlreq_ap,verbosity=3)
   resp <- httr2::resp_body_string(preq)
   
   result <- jsonlite::fromJSON(resp)
