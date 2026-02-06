@@ -62,7 +62,7 @@ Change the version number in the DESCRIPTION file
 To build the package locally, use the following command in your R console:
 
 ```r
-devtools::build()
+devtools::build(path = ".")
 ```
 
 This will create a `.tar.gz` file that you can install or distribute.
