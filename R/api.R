@@ -560,7 +560,7 @@ update_media_timestamps <- function(hdr, media_records) {
     httr2::req_body_json(media_records)
   
   preq <- tryCatch(
-    httr2::req_perform(urlreq_ap),
+    httr2::req_perform(urlreq_ap,verbosity=3),
     error = function(e) {
       stop(
         "Failed to perform request to update media timestamps: ",
